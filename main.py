@@ -1,14 +1,14 @@
 import random
-from math import pi, tau
+from math import pi, sqrt, tau
 from pathlib import Path
-from random import gauss
+from random import gauss, randrange
 from time import time
 
 import pygame
 
 pygame.init()
 
-DEBUG = True
+DEBUG = 1
 
 
 def clamp(x, mini, maxi):
@@ -52,7 +52,7 @@ class Object:
     def logic(self, game):
         pass
 
-    def draw(self, display):
+    def draw(self, display: pygame.Surface):
         if DEBUG:
             pygame.draw.rect(display, 'red', (self.pos, self.size), 1)
 
@@ -67,6 +67,10 @@ class Bar(Object):
     def handle_mouse_event(self, event):
         x, y = event.pos
         self.pos.x = x - self.size.x / 2
+
+    def draw(self, display):
+        display.fill(Color.BRIGHTEST, self)
+        pygame.draw.rect(display, Color.BRIGHT, self.rect, 2)
 
     def spawn_ball(self):
         return Ball(self.rect.center + pygame.Vector2(0, -30))
@@ -100,7 +104,7 @@ class Ball(Object):
         for bar in game.get_all(Bar):
             r = self.rect
             br: pygame.Rect = bar.rect
-            if r.colliderect(br):
+            if self.rect_collision(br) is not None:
                 dx = (r.centerx - br.centerx) / br.width   # proportion on the side
                 dx = round(8 * dx) / 8  # discrete steps like in the original game
 
@@ -108,12 +112,136 @@ class Ball(Object):
                 self.vel.from_polar((self.VELOCITY, -angle))
                 self.pos.y = br.top - self.size.y
 
+        # Collision against bricks
+        for brick in game.bricks.all_bricks():
+            # TODO: only the bricks in the ball's rectangle
+            if (n := self.rect_collision(brick.rect)) is not None:
+                vel_along_normal = n.dot(self.vel)
+                if vel_along_normal < 0:
+                    continue  # Already separating
+                self.vel -= 2*vel_along_normal * n
+
     def draw(self, display):
         super(Ball, self).draw(display)
 
         pygame.draw.circle(display, Color.BRIGHT, self.rect.center, self.RADIUS)
         pygame.draw.circle(display, Color.BRIGHTEST, self.rect.center, self.RADIUS * 0.75)
 
+    def rect_collision(self, rect):
+        """Return the normal of the collision between a ball and a rect.
+
+        Return None if there is no collision. The velocity of the ball """
+
+        center = pygame.Vector2(self.rect.center)
+        # Find the closest point to the circle within the rectangle
+        closest = pygame.Vector2(
+            clamp(center.x, rect.left, rect.right),
+            clamp(center.y, rect.top, rect.bottom)
+        )
+
+        # Calculate the distance between the circle's center and self closest point
+        d = center - closest
+
+        # If the distance is less than the circle's radius, an intersection occurs
+        norm2 = d.length_squared()
+        if norm2 >= (self.RADIUS ** 2):
+            return None
+
+        if closest == center:
+            # Circle is inside the AABB, so we need to clamp the circle's center
+            # to the closest edge
+
+            left = center.x - rect.left
+            top = center.y - rect.top
+            right = rect.right - center.x
+            bottom = rect.bottom - center.y
+
+            mini = min(left, top, right, bottom)
+            if mini == left:
+                closest.x = rect.left
+            elif mini == right:
+                closest.x = rect.right
+            elif mini == top:
+                closest.y = rect.top
+            elif mini == bottom:
+                closest.y = rect.bottom
+
+            normal = closest - center # center.to(closest)
+
+            n = normal.length()
+            return normal / -n
+            # return (
+            #     normal.dividedBy(-n),  # Out direction
+            #     self.RADIUS - n  # penetration
+            # )
+        else:
+            norm = sqrt(norm2)
+            return d / -norm
+            # return (
+            #     d.dividedBy(-norm),  # Out direction
+            #     self.RADIUS - norm  # penetration
+            # )
+
+class Bricks(Object):
+    def __init__(self, lines, cols, size):
+        super(Bricks, self).__init__((0, 0), size)
+        self.lines = lines
+        self.cols = cols
+
+        self.bricks = [
+            [None] * cols
+            for _ in range(lines)
+        ]
+
+        for _ in range(20):
+            l = randrange(0, lines)
+            c = randrange(0, cols)
+            self.bricks[l][c] = Brick(self.grid_to_screen(l, c), self.brick_size)
+
+        print(self.bricks)
+
+    @property
+    def line_height(self):
+        return self.size.y / self.lines
+
+    @property
+    def col_width(self):
+        return self.size.x / self.cols
+
+    @property
+    def brick_size(self):
+        return (self.col_width, self.line_height)
+
+    def grid_to_screen(self, line, col):
+        return pygame.Vector2(
+            col * self.col_width,
+            line * self.line_height
+        )
+
+    def screen_to_grid(self, pos):
+        return (pos.x // self.col_width, pos.y // self.line_height)
+
+    def all_bricks(self):
+        for line in self.bricks:
+            for brick in line:
+                if brick is not None:
+                    yield brick
+
+    def draw(self, display):
+        for brick in self.all_bricks():
+            if brick is not None:
+                brick.draw(display)
+
+class Brick(Object):
+    def __init__(self, pos, size):
+        super().__init__(pos, size)
+        self.color = Color.BRIGHT
+
+    def __repr__(self):
+        return f"<Brick({self.pos.x}, {self.pos.y})>"
+
+    def draw(self, display):
+        display.fill(self.color, self.rect)
 
 class Game:
     SIZE = (800, 500)
@@ -130,6 +258,7 @@ class Game:
 
         self.objects = []
         self.bar = self.add(Bar(self.SIZE[1] - 30))
+        self.bricks = self.add(Bricks(17, 17, (self.SIZE[0], self.SIZE[1] - 40)))
         self.add(self.bar.spawn_ball())
 
     def add(self, object):
