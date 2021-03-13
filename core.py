@@ -39,13 +39,14 @@ class Object:
 
 
 class State:
-    BG_COLOR = None
+    BG_COLOR = Color.DARKEST
 
     def __init__(self, size):
         self.add_later = []
         self.add_lock = False
         self.objects = set()
         self.size = pygame.Vector2(size)
+        self.next_state = self
 
     @property
     def w(self):
@@ -70,7 +71,7 @@ class State:
     def logic(self):
         """All the logic of the state happens here.
 
-        The function returns the next state of the game."""
+        To change to an other state, you need to set self.next_state"""
 
         # Add all object that have been queued
         self.add_lock = False
@@ -90,8 +91,6 @@ class State:
                 to_remove.add(object)
         self.objects.difference_update(to_remove)
 
-        return self
-
     def draw(self, display):
         if self.BG_COLOR:
             display.fill(self.BG_COLOR)
@@ -100,6 +99,9 @@ class State:
             object.draw(display)
 
     def handle_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.on_key_down(event)
+
         for object in self.objects:
             object.handle_event(event)
 
@@ -112,6 +114,11 @@ class State:
         tmp_surf = self.get_font(size).render(str(txt), 1, color, self.BG_COLOR)
         rect = tmp_surf.get_rect(**anchor)
         surf.blit(tmp_surf, rect)
+
+        return rect
+
+    def on_key_down(self, event):
+        pass
 
     @staticmethod
     @lru_cache()
@@ -139,13 +146,13 @@ class App:
         self.running = True
         while self.running:
             self.events()
-            next_state = self.state.logic()
+            self.state.logic()
             self.state.draw(self.display)
 
             pygame.display.update()
             self.clock.tick(self.FPS)
             frame += 1
-            self.state = next_state
+            self.state = self.state.next_state
 
         duration = time() - start
         print(f"Game played for {duration:.2f} seconds, at {frame / duration:.1f} FPS.")

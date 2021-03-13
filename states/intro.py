@@ -34,8 +34,7 @@ class IntroState(State):
                 ))
 
         if self.ended:
-            return GameState(self.size)
-        return self
+            self.next_state = GameState(self.size)
 
     def handle_event(self, event):
         super(IntroState, self).handle_event(event)

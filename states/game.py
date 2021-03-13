@@ -3,6 +3,7 @@ import pygame
 from core import App, State
 from locals import Color
 from objects import Bar, Bricks, Ball
+from states.gameover import GameOverState
 
 pygame.init()
 
@@ -35,7 +36,10 @@ class GameState(State):
         if not list(self.get_all(Ball)):
             # No more balls, spawn one
             self.add(self.bar.spawn_ball())
-        return self
+            self.lives -= 1
+
+        if self.lives <= 0:
+            self.next_state = GameOverState(self.size, self.level, self.score)
 
     def draw(self, display):
         super(GameState, self).draw(display)

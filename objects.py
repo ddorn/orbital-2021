@@ -275,7 +275,11 @@ class Brick(Object):
 
     def hit(self, game):
         self.alive = False
-        game.score += 1
+
+        from states.game import GameState
+        if isinstance(game, GameState):
+            game.score += 1
+
         for _ in range(self.PARTICLES):
             vel = pygame.Vector2()
             vel.from_polar((
