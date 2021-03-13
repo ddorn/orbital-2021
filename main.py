@@ -1,17 +1,13 @@
-import random
-from functools import lru_cache
-from math import pi, sqrt, tau
-from pathlib import Path
-from random import gauss, randrange, uniform
-from time import time
-from typing import List
-from typing import Union
+from math import sqrt
+from random import gauss, uniform
+from typing import List, Union
 
 import pygame
 
-pygame.init()
+from core import App, Object, State
+from locals import Color
 
-DEBUG = 0
+pygame.init()
 
 
 def clamp(x, mini, maxi):
@@ -20,45 +16,6 @@ def clamp(x, mini, maxi):
     if x > maxi:
         return maxi
     return x
-
-
-class Color:
-    DARKEST = "#331727"
-    DARK = "#440a67"
-    MIDDLE = '#93329e'
-    BRIGHT = '#b4aee8'
-    BRIGHTEST = '#ffe3fe'
-
-
-class Paths:
-    TOP = Path(__file__).parent
-    ASSETS = TOP / "assets"
-    FONT = ASSETS / "fonts" / "ThaleahFat.ttf"
-
-
-class Object:
-    def __init__(self, pos, size):
-        self.pos = pygame.Vector2(pos)
-        self.size = pygame.Vector2(size)
-        self.alive = True
-
-    @property
-    def rect(self):
-        return pygame.Rect(self.pos, self.size)
-
-    def handle_event(self, event):
-        if event.type == pygame.MOUSEMOTION:
-            self.handle_mouse_event(event)
-
-    def handle_mouse_event(self, event):
-        pass
-
-    def logic(self, game):
-        pass
-
-    def draw(self, display: pygame.Surface):
-        if DEBUG:
-            pygame.draw.rect(display, 'red', (self.pos, self.size), 1)
 
 
 class Particle(Object):
@@ -126,13 +83,13 @@ class Ball(Object):
         if self.pos.x < 0:
             self.pos.x = 0
             self.vel.x *= -1
-        if self.pos.x > game.SIZE[0] - self.size.x:
-            self.pos.x = game.SIZE[0] - self.size.x
+        if self.pos.x > game.w - self.size.x:
+            self.pos.x = game.w - self.size.x
             self.vel.x *= -1
         if self.pos.y < 0:
             self.pos.y = 0
             self.vel.y *= -1
-        if self.pos.y > game.SIZE[1]:
+        if self.pos.y > game.h:
             self.alive = False
 
         # Collision with bars
@@ -146,7 +103,6 @@ class Ball(Object):
 
                 angle = (-dx + 1) * 90
                 self.vel.from_polar((self.VELOCITY, -angle))
-                self.pos.y = br.top - self.size.y
 
         # Collision against bricks
         for brick in game.bricks.all_bricks():
@@ -241,10 +197,11 @@ class Bricks(Object):
         ]  # type: List[List[Union[None, Brick]]]
 
         for c in range(lines // 3, 2 * lines // 3 + 1):
-            for l in range(2, cols // 3):
+            for l in range(4, 6):
                 # l = randrange(0, lines)
                 # c = randrange(0, cols)
-                self.bricks[l][c] = Brick(self.grid_to_screen(l, c), self.brick_size)
+                if c != cols // 2:
+                    self.bricks[l][c] = Brick(self.grid_to_screen(l, c), self.brick_size)
 
         print(self.bricks)
 
@@ -258,7 +215,7 @@ class Bricks(Object):
 
     @property
     def brick_size(self):
-        return (self.col_width, self.line_height)
+        return self.col_width, self.line_height
 
     def grid_to_screen(self, line, col):
         return pygame.Vector2(
@@ -267,7 +224,7 @@ class Bricks(Object):
         )
 
     def screen_to_grid(self, pos):
-        return (pos.x // self.col_width, pos.y // self.line_height)
+        return pos.x // self.col_width, pos.y // self.line_height
 
     def all_bricks(self, indices=False):
         for l, line in enumerate(self.bricks):
@@ -319,120 +276,44 @@ class Brick(Object):
             ))
 
 
-class Game:
-    SIZE = (800, 500)
-    FPS = 60
+class GameState(State):
     BG_COLOR = Color.DARKEST
 
-    def __init__(self):
-        self.running = False
-        self.display = pygame.display.set_mode(self.SIZE)
-        self.clock = pygame.time.Clock()
-
-        self.debug = "debug"
+    def __init__(self, size):
+        super().__init__(size)
 
         self.score = 0
+        self.level = 0
+        self.lives = 3
 
-        self.add_later = []
-        self.add_lock = False
-        self.objects = set()
-        self.bar = self.add(Bar(self.SIZE[1] - 30))
-        self.bricks = self.add(Bricks(17, 17, (self.SIZE[0], self.SIZE[1] - 40)))
+        self.bar = self.add(Bar(self.h - 30))
+        self.bricks = self.add(Bricks(17, 17, (self.w, self.h - 40)))
         self.add(self.bar.spawn_ball())
 
-    def add(self, object):
-        if self.add_lock:
-            self.add_later.append(object)
-        else:
-            self.objects.add(object)
-        return object
-
-    def get_all(self, type_):
-        for object in self.objects:
-            if isinstance(object, type_):
-                yield object
-
-    def run(self):
-        frame = 0
-        start = time()
-        self.running = True
-        while self.running:
-            if DEBUG:
-                print("Frame: ", frame)
-
-            for event in pygame.event.get():
-                self.handle_event(event)
-            self.logic()
-            self.draw()
-
-            pygame.display.update()
-            self.clock.tick(self.FPS)
-            frame += 1
-
-        duration = time() - start
-        print(f"Game played for {duration:.2} seconds, at {frame / duration:.1f} FPS.")
-
     def handle_event(self, event):
-        if event.type == pygame.QUIT:
-            self.running = False
-        elif event.type == pygame.KEYDOWN:
+        super(GameState, self).handle_event(event)
+
+        if event.type == pygame.KEYDOWN:
             key = event.key
-            if key == pygame.K_ESCAPE:
-                self.running = False
             if key == pygame.K_SPACE:
                 self.add(self.bar.spawn_ball())
-            else:
-                print(event)
 
-        for object in self.objects:
-            object.handle_event(event)
 
     def logic(self):
-        # Add all object that have been queued
-        self.add_lock = False
-        for object in self.add_later:
-            self.add(object)
-        self.add_later =[]
-        self.add_lock = True
+        super(GameState, self).logic()
 
-        # Logic for all objects
-        for object in self.objects:
-            object.logic(self)
-
-        # Clean dead objects
-        to_remove = set()
-        for object in self.objects:
-            if not object.alive:
-                to_remove.add(object)
-        self.objects.difference_update(to_remove)
-
-        # Global logic
         if not list(self.get_all(Ball)):
-            # No more balls
+            # No more balls, spawn one
             self.add(self.bar.spawn_ball())
+        return self
 
-    def draw(self):
-        self.display.fill(self.BG_COLOR)
-        if DEBUG and self.debug:
-            self.draw_text(self.debug, topleft=(3, 3))
+    def draw(self, display):
+        super(GameState, self).draw(display)
 
-        self.draw_text(self.score, topright=(self.SIZE[0] - 3, 3))
-
-        for object in self.objects:
-            object.draw(self.display)
-
-    def draw_text(self, txt, size=32, **anchor):
-        assert len(anchor) == 1
-        # noinspection PyTypeChecker
-        surf = self.get_font(size).render(str(txt), 1, Color.BRIGHTEST, self.BG_COLOR)
-        rect = surf.get_rect(**anchor)
-        self.display.blit(surf, rect)
-
-    @staticmethod
-    @lru_cache()
-    def get_font(size):
-        return pygame.font.Font(Paths.FONT, size)
+        self.draw_text(display, f"Score: {self.score}", topright=(self.w - 5, 3))
+        self.draw_text(display, f"Level: {self.level}", topleft=(5, 3))
+        self.draw_text(display, "<3" * self.lives, Color.ORANGE, midtop=(self.w / 2, 3))
 
 
 if __name__ == '__main__':
-    Game().run()
+    App(GameState).run()
