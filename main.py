@@ -2,7 +2,7 @@ import random
 from functools import lru_cache
 from math import pi, sqrt, tau
 from pathlib import Path
-from random import gauss, randrange
+from random import gauss, randrange, uniform
 from time import time
 from typing import List
 from typing import Union
@@ -61,6 +61,37 @@ class Object:
             pygame.draw.rect(display, 'red', (self.pos, self.size), 1)
 
 
+class Particle(Object):
+    def __init__(self, pos, vel, lifespan, decay=0.95):
+        super().__init__(pos, (1, 1))
+        self.vel = pygame.Vector2(vel)
+        self.lifespan = lifespan
+        self.age = 0
+        self.decay = decay
+
+    def logic(self, game):
+        self.age += 1
+        if self.age > self.lifespan:
+            self.alive = False
+        self.pos += self.vel
+        self.vel *= self.decay
+
+    def draw(self, display):
+        super(Particle, self).draw(display)
+        r = 5 * (1 - self.age / self.lifespan) ** 0.5
+        dir = self.vel.normalize()
+        cross = pygame.Vector2(-dir.y, dir.x)
+        vertices = [
+            self.pos + dir * r,
+            self.pos + cross * r,
+            self.pos - dir * r * 2,
+            self.pos - cross * r,
+        ]
+        pygame.draw.polygon(display, Color.BRIGHTEST, vertices)
+
+        # pygame.draw.circle(display, Color.BRIGHTEST, self.pos, radius)
+
+
 class Bar(Object):
     SIZE = (50, 10)
 
@@ -109,7 +140,7 @@ class Ball(Object):
             r = self.rect
             br: pygame.Rect = bar.rect
             if self.rect_collision(br) is not None:
-                dx = (r.centerx - br.centerx) / br.width * 2 # proportion on the side
+                dx = (r.centerx - br.centerx) / br.width * 2  # proportion on the side
                 dx = clamp(dx, -0.8, 0.8)
                 dx = round(8 * dx) / 8  # discrete steps like in the original game
 
@@ -166,17 +197,25 @@ class Ball(Object):
             mini = min(left, top, right, bottom)
             if mini == left:
                 closest.x = rect.left
+                normal_bkp = (-1, 0)  # Those normal are for the rare case when the center is exactly on the border
             elif mini == right:
                 closest.x = rect.right
+                normal_bkp = (1, 0)
             elif mini == top:
                 closest.y = rect.top
+                normal_bkp = (0, -1)
             elif mini == bottom:
                 closest.y = rect.bottom
+                normal_bkp = (0, 1)
 
-            normal = closest - center  # center.to(closest)
-
+            normal = center - closest
             n = normal.length()
-            return normal / -n
+
+            if n == 0:
+                breakpoint()
+                return normal_bkp
+
+            return normal / n
             # return (
             #     normal.dividedBy(-n),  # Out direction
             #     self.RADIUS - n  # penetration
@@ -251,6 +290,8 @@ class Bricks(Object):
 
 
 class Brick(Object):
+    PARTICLES = 6
+
     def __init__(self, pos, size):
         super().__init__(pos, size)
         self.color = Color.BRIGHT
@@ -265,6 +306,17 @@ class Brick(Object):
     def hit(self, game):
         self.alive = False
         game.score += 1
+        for _ in range(self.PARTICLES):
+            vel = pygame.Vector2()
+            vel.from_polar((
+                gauss(13, 3),
+                uniform(0, 360)
+            ))
+            game.add(Particle(
+                self.rect.center,
+                vel,
+                15
+            ))
 
 
 class Game:
@@ -281,13 +333,18 @@ class Game:
 
         self.score = 0
 
-        self.objects = []
+        self.add_later = []
+        self.add_lock = False
+        self.objects = set()
         self.bar = self.add(Bar(self.SIZE[1] - 30))
         self.bricks = self.add(Bricks(17, 17, (self.SIZE[0], self.SIZE[1] - 40)))
         self.add(self.bar.spawn_ball())
 
     def add(self, object):
-        self.objects.append(object)
+        if self.add_lock:
+            self.add_later.append(object)
+        else:
+            self.objects.add(object)
         return object
 
     def get_all(self, type_):
@@ -331,17 +388,23 @@ class Game:
             object.handle_event(event)
 
     def logic(self):
+        # Add all object that have been queued
+        self.add_lock = False
+        for object in self.add_later:
+            self.add(object)
+        self.add_later =[]
+        self.add_lock = True
+
         # Logic for all objects
         for object in self.objects:
             object.logic(self)
 
         # Clean dead objects
-        to_remove = []
-        for i, object in enumerate(self.objects):
+        to_remove = set()
+        for object in self.objects:
             if not object.alive:
-                to_remove.append(i)
-        for idx in reversed(to_remove):
-            self.objects.pop(idx)
+                to_remove.add(object)
+        self.objects.difference_update(to_remove)
 
         # Global logic
         if not list(self.get_all(Ball)):
@@ -368,7 +431,7 @@ class Game:
     @staticmethod
     @lru_cache()
     def get_font(size):
-        return  pygame.font.Font(Paths.FONT, size)
+        return pygame.font.Font(Paths.FONT, size)
 
 
 if __name__ == '__main__':
