@@ -1,14 +1,17 @@
 import random
+from functools import lru_cache
 from math import pi, sqrt, tau
 from pathlib import Path
 from random import gauss, randrange
 from time import time
+from typing import List
+from typing import Union
 
 import pygame
 
 pygame.init()
 
-DEBUG = 1
+DEBUG = 0
 
 
 def clamp(x, mini, maxi):
@@ -18,10 +21,11 @@ def clamp(x, mini, maxi):
         return maxi
     return x
 
+
 class Color:
     DARKEST = "#331727"
     DARK = "#440a67"
-    # 93329e
+    MIDDLE = '#93329e'
     BRIGHT = '#b4aee8'
     BRIGHTEST = '#ffe3fe'
 
@@ -105,7 +109,8 @@ class Ball(Object):
             r = self.rect
             br: pygame.Rect = bar.rect
             if self.rect_collision(br) is not None:
-                dx = (r.centerx - br.centerx) / br.width   # proportion on the side
+                dx = (r.centerx - br.centerx) / br.width * 2 # proportion on the side
+                dx = clamp(dx, -0.8, 0.8)
                 dx = round(8 * dx) / 8  # discrete steps like in the original game
 
                 angle = (-dx + 1) * 90
@@ -119,7 +124,9 @@ class Ball(Object):
                 vel_along_normal = n.dot(self.vel)
                 if vel_along_normal < 0:
                     continue  # Already separating
-                self.vel -= 2*vel_along_normal * n
+                # invert velocity along the normal
+                self.vel -= 2 * vel_along_normal * n
+                brick.hit(game)
 
     def draw(self, display):
         super(Ball, self).draw(display)
@@ -166,7 +173,7 @@ class Ball(Object):
             elif mini == bottom:
                 closest.y = rect.bottom
 
-            normal = closest - center # center.to(closest)
+            normal = closest - center  # center.to(closest)
 
             n = normal.length()
             return normal / -n
@@ -182,6 +189,7 @@ class Ball(Object):
             #     self.RADIUS - norm  # penetration
             # )
 
+
 class Bricks(Object):
     def __init__(self, lines, cols, size):
         super(Bricks, self).__init__((0, 0), size)
@@ -191,12 +199,13 @@ class Bricks(Object):
         self.bricks = [
             [None] * cols
             for _ in range(lines)
-        ]
+        ]  # type: List[List[Union[None, Brick]]]
 
-        for _ in range(20):
-            l = randrange(0, lines)
-            c = randrange(0, cols)
-            self.bricks[l][c] = Brick(self.grid_to_screen(l, c), self.brick_size)
+        for c in range(lines // 3, 2 * lines // 3 + 1):
+            for l in range(2, cols // 3):
+                # l = randrange(0, lines)
+                # c = randrange(0, cols)
+                self.bricks[l][c] = Brick(self.grid_to_screen(l, c), self.brick_size)
 
         print(self.bricks)
 
@@ -221,16 +230,25 @@ class Bricks(Object):
     def screen_to_grid(self, pos):
         return (pos.x // self.col_width, pos.y // self.line_height)
 
-    def all_bricks(self):
-        for line in self.bricks:
-            for brick in line:
+    def all_bricks(self, indices=False):
+        for l, line in enumerate(self.bricks):
+            for c, brick in enumerate(line):
                 if brick is not None:
-                    yield brick
+                    if indices:
+                        yield (l, c), brick
+                    else:
+                        yield brick
 
     def draw(self, display):
         for brick in self.all_bricks():
             if brick is not None:
                 brick.draw(display)
+
+    def logic(self, game):
+        for (l, c), brick in self.all_bricks(True):
+            if brick is not None and not brick.alive:
+                self.bricks[l][c] = None
+
 
 class Brick(Object):
     def __init__(self, pos, size):
@@ -242,6 +260,12 @@ class Brick(Object):
 
     def draw(self, display):
         display.fill(self.color, self.rect)
+        pygame.draw.rect(display, Color.DARKEST, self.rect, 2)
+
+    def hit(self, game):
+        self.alive = False
+        game.score += 1
+
 
 class Game:
     SIZE = (800, 500)
@@ -254,7 +278,8 @@ class Game:
         self.clock = pygame.time.Clock()
 
         self.debug = "debug"
-        self.font = pygame.font.Font(Paths.FONT, 20)
+
+        self.score = 0
 
         self.objects = []
         self.bar = self.add(Bar(self.SIZE[1] - 30))
@@ -326,11 +351,24 @@ class Game:
     def draw(self):
         self.display.fill(self.BG_COLOR)
         if DEBUG and self.debug:
-            txt = self.font.render(self.debug, 1, Color.BRIGHTEST, self.BG_COLOR)
-            self.display.blit(txt, (3, 3))
+            self.draw_text(self.debug, topleft=(3, 3))
+
+        self.draw_text(self.score, topright=(self.SIZE[0] - 3, 3))
 
         for object in self.objects:
             object.draw(self.display)
+
+    def draw_text(self, txt, size=32, **anchor):
+        assert len(anchor) == 1
+        # noinspection PyTypeChecker
+        surf = self.get_font(size).render(str(txt), 1, Color.BRIGHTEST, self.BG_COLOR)
+        rect = surf.get_rect(**anchor)
+        self.display.blit(surf, rect)
+
+    @staticmethod
+    @lru_cache()
+    def get_font(size):
+        return  pygame.font.Font(Paths.FONT, size)
 
 
 if __name__ == '__main__':
