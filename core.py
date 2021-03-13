@@ -21,11 +21,16 @@ class Object:
     def handle_event(self, event):
         if event.type == pygame.MOUSEMOTION:
             self.handle_mouse_event(event)
+        if event.type == pygame.KEYDOWN:
+            self.hangle_key_press(event)
 
     def handle_mouse_event(self, event):
         pass
 
-    def logic(self, game):
+    def hangle_key_press(self, event):
+        pass
+
+    def logic(self, state):
         pass
 
     def draw(self, display: pygame.Surface):
@@ -40,7 +45,7 @@ class State:
         self.add_later = []
         self.add_lock = False
         self.objects = set()
-        self.size = size
+        self.size = pygame.Vector2(size)
 
     @property
     def w(self):
@@ -99,7 +104,7 @@ class State:
             object.handle_event(event)
 
     def resize(self, new_size):
-        self.size = new_size
+        self.size = pygame.Vector2(new_size)
 
     def draw_text(self, surf, txt, color=Color.BRIGHTEST, size=32, **anchor):
         assert len(anchor) == 1
@@ -162,3 +167,17 @@ class App:
     @classmethod
     def state(cls):
         return cls.CURRENT_APP.state
+
+    @classmethod
+    def width(cls):
+        if cls.CURRENT_APP:
+            return cls.CURRENT_APP.SIZE[0]
+        else:
+            return cls.SIZE[0]
+
+    @classmethod
+    def height(cls):
+        if cls.CURRENT_APP:
+            return cls.CURRENT_APP.SIZE[1]
+        else:
+            return cls.SIZE[1]

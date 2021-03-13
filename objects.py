@@ -17,7 +17,7 @@ class Particle(Object):
         self.age = 0
         self.decay = decay
 
-    def logic(self, game):
+    def logic(self, state):
         self.age += 1
         if self.age > self.lifespan:
             self.alive = False
@@ -42,15 +42,32 @@ class Particle(Object):
 
 class Bar(Object):
     SIZE = (50, 10)
+    K_LEFT = (pygame.K_LEFT, pygame.K_a, pygame.K_q)
+    K_RIGHT = (pygame.K_RIGHT, pygame.K_d)
+    VELOCITY = 9
 
     def __init__(self, pos_y):
-        x = pygame.mouse.get_pos()[0] - self.SIZE[0] / 2
+        x = App.width() / 2 - self.SIZE[0] / 2
+        # x = pygame.mouse.get_pos()[0] - self.SIZE[0] / 2
         super().__init__((x, pos_y), self.SIZE)
 
-    def handle_mouse_event(self, event):
-        x, y = event.pos
+    # def handle_mouse_event(self, event):
+    #     x, y = event.pos
+    #     self.pos.x = clamp(
+    #         x - self.size.x / 2,
+        #     0,
+        #     App.state().w - self.size.x
+        # )
+
+    def logic(self, state):
+        keys = pygame.key.get_pressed()
+        if any(keys[k] for k in self.K_LEFT):
+            self.pos.x -= self.VELOCITY
+        if any(keys[k] for k in self.K_RIGHT):
+            self.pos.x += self.VELOCITY
+
         self.pos.x = clamp(
-            x - self.size.x / 2,
+            self.pos.x,
             0,
             App.state().w - self.size.x
         )
@@ -72,23 +89,23 @@ class Ball(Object):
         super().__init__(pos, (self.RADIUS * 2, self.RADIUS * 2))
         self.vel = pygame.Vector2(0, -self.VELOCITY)
 
-    def logic(self, game):
+    def logic(self, state):
         self.pos += self.vel
 
         if self.pos.x < 0:
             self.pos.x = 0
             self.vel.x *= -1
-        if self.pos.x > game.w - self.size.x:
-            self.pos.x = game.w - self.size.x
+        if self.pos.x > state.w - self.size.x:
+            self.pos.x = state.w - self.size.x
             self.vel.x *= -1
         if self.pos.y < 0:
             self.pos.y = 0
             self.vel.y *= -1
-        if self.pos.y > game.h:
+        if self.pos.y > state.h:
             self.alive = False
 
         # Collision with bars
-        for bar in game.get_all(Bar):
+        for bar in state.get_all(Bar):
             r = self.rect
             br: pygame.Rect = bar.rect
             if self.rect_collision(br) is not None:
@@ -100,15 +117,16 @@ class Ball(Object):
                 self.vel.from_polar((self.VELOCITY, -angle))
 
         # Collision against bricks
-        for brick in game.bricks.all_bricks():
-            # TODO: only the bricks in the ball's rectangle
-            if (n := self.rect_collision(brick.rect)) is not None:
-                vel_along_normal = n.dot(self.vel)
-                if vel_along_normal < 0:
-                    continue  # Already separating
-                # invert velocity along the normal
-                self.vel -= 2 * vel_along_normal * n
-                brick.hit(game)
+        for bricks in state.get_all(Bricks):
+            for brick in bricks.all_bricks():
+                # TODO: only the bricks in the ball's rectangle
+                if (n := self.rect_collision(brick.rect)) is not None:
+                    vel_along_normal = n.dot(self.vel)
+                    if vel_along_normal < 0:
+                        continue  # Already separating
+                    # invert velocity along the normal
+                    self.vel -= 2 * vel_along_normal * n
+                    brick.hit(state)
 
     def draw(self, display):
         super(Ball, self).draw(display)
@@ -235,7 +253,7 @@ class Bricks(Object):
             if brick is not None:
                 brick.draw(display)
 
-    def logic(self, game):
+    def logic(self, state):
         for (l, c), brick in self.all_bricks(True):
             if brick is not None and not brick.alive:
                 self.bricks[l][c] = None

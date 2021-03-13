@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pygame
+
 
 def clamp(x, mini, maxi):
     if x < mini:
@@ -7,6 +9,14 @@ def clamp(x, mini, maxi):
     if x > maxi:
         return maxi
     return x
+
+
+def polar(r, phi):
+    """Return a 2D vector with the given polar coordinates. The angle is in degrees."""
+
+    vec = pygame.Vector2()
+    vec.from_polar((r, phi))
+    return vec
 
 
 class Color:
