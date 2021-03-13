@@ -117,6 +117,7 @@ class State:
 class App:
     SIZE = (800, 500)
     FPS = 60
+    CURRENT_APP = None
 
     def __init__(self, initial_state):
         self.running = False
@@ -124,6 +125,8 @@ class App:
         self.clock = pygame.time.Clock()
 
         self.state = initial_state(self.SIZE)
+
+        App.CURRENT_APP = self
 
     def run(self):
         frame = 0
@@ -140,7 +143,7 @@ class App:
             self.state = next_state
 
         duration = time() - start
-        print(f"Game played for {duration:.2} seconds, at {frame / duration:.1f} FPS.")
+        print(f"Game played for {duration:.2f} seconds, at {frame / duration:.1f} FPS.")
 
     def events(self):
         for event in pygame.event.get():
@@ -151,3 +154,11 @@ class App:
                     self.running = False
 
             self.state.handle_event(event)
+
+    @classmethod
+    def app(cls):
+        return cls.CURRENT_APP
+
+    @classmethod
+    def state(cls):
+        return cls.CURRENT_APP.state

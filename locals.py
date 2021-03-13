@@ -1,6 +1,14 @@
 from pathlib import Path
 
 
+def clamp(x, mini, maxi):
+    if x < mini:
+        return mini
+    if x > maxi:
+        return maxi
+    return x
+
+
 class Color:
     ORANGE = "#ffa500"
     DARKEST = "#331727"
