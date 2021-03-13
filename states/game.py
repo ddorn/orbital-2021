@@ -3,7 +3,9 @@ import pygame
 from core import App, State
 from locals import Color
 from objects import Bar, Bricks, Ball
+from powerups import POWERUPS
 from states.gameover import GameOverState
+from states.pickpowerup import PickPowerUpState
 
 pygame.init()
 
@@ -31,12 +33,17 @@ class GameState(State):
                 self.add(self.bar.spawn_ball())
 
     def logic(self):
-        super(GameState, self).logic()
+        super().logic()
 
         if not list(self.get_all(Ball)):
             # No more balls, spawn one
             self.add(self.bar.spawn_ball())
             self.lives -= 1
+
+        if len(self.bricks) < 3:
+            self.next_state = PickPowerUpState(self, POWERUPS)
+            self.bricks.alive = False
+            self.bricks = self.add(Bricks(17, 17, (self.w, self.h - 40)))
 
         if self.lives <= 0:
             self.next_state = GameOverState(self.size, self.level, self.score)

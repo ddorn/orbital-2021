@@ -12,7 +12,6 @@ class GameOverState(State):
         self.level = level
         self.score = score
 
-
     def on_key_down(self, event):
         if event.key == pygame.K_SPACE:
             from states.game import GameState

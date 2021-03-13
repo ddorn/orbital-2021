@@ -41,15 +41,16 @@ class Particle(Object):
 
 
 class Bar(Object):
-    SIZE = (50, 10)
+    START_SIZE = (50, 10)
+    START_VELOCITY = 9
     K_LEFT = (pygame.K_LEFT, pygame.K_a, pygame.K_q)
     K_RIGHT = (pygame.K_RIGHT, pygame.K_d)
-    VELOCITY = 9
 
     def __init__(self, pos_y):
-        x = App.width() / 2 - self.SIZE[0] / 2
+        x = App.width() / 2 - self.START_SIZE[0] / 2
         # x = pygame.mouse.get_pos()[0] - self.SIZE[0] / 2
-        super().__init__((x, pos_y), self.SIZE)
+        super().__init__((x, pos_y), self.START_SIZE)
+        self.velocity = self.START_VELOCITY
 
     # def handle_mouse_event(self, event):
     #     x, y = event.pos
@@ -62,9 +63,9 @@ class Bar(Object):
     def logic(self, state):
         keys = pygame.key.get_pressed()
         if any(keys[k] for k in self.K_LEFT):
-            self.pos.x -= self.VELOCITY
+            self.pos.x -= self.velocity
         if any(keys[k] for k in self.K_RIGHT):
-            self.pos.x += self.VELOCITY
+            self.pos.x += self.velocity
 
         self.pos.x = clamp(
             self.pos.x,
@@ -181,8 +182,7 @@ class Ball(Object):
             n = normal.length()
 
             if n == 0:
-                breakpoint()
-                return normal_bkp
+                return pygame.Vector2(normal_bkp)
 
             return normal / n
             # return (
@@ -217,6 +217,9 @@ class Bricks(Object):
                     self.bricks[l][c] = Brick(self.grid_to_screen(l, c), self.brick_size)
 
         print(self.bricks)
+
+    def __len__(self):
+        return sum(1 for _ in self.all_bricks())
 
     @property
     def line_height(self):
