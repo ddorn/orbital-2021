@@ -18,7 +18,6 @@ class GameState(State):
     BG_MUSIC = 'ambience.wav'
     BG_SHAPES = 10
     BALL_SPEED_GAIN = 0.5
-    _INSTANCE = None
 
     def __init__(self):
         super().__init__()
@@ -31,8 +30,6 @@ class GameState(State):
 
         self.powerups = []
         self.score_level = 0
-
-        GameState._INSTANCE = self
 
         self.bar = self.add(Bar(self.h - 30))
         self.bricks = self.add(Bricks.load(0))
@@ -90,8 +87,8 @@ class GameState(State):
         if len(self.bricks) < 3:
             self.end_level()
 
-        if self.lives <= 0:
-            self.next_state = GameOverState(self.level, self.score)
+        if self.lives <= 2:
+            self.next_state = GameOverState(self.level, self.score, self.powerups)
 
     def draw(self, display):
         super(GameState, self).draw(display)

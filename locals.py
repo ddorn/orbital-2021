@@ -137,8 +137,11 @@ class Config:
 
     @property
     def zoom(self):
+
         from core import App
-        return max(self.w / App.SIZE[0], self.h / App.SIZE[1])
+        zoom = min(self.w / App.SIZE[0], self.h / App.SIZE[1])
+        if DEBUG: print(zoom)
+        return zoom
 
     def scale(self, *size):
         return self.zoom * pygame.Vector2(*size)

@@ -20,14 +20,18 @@ class Powerup:
         self.descr = descr
         self.kind = kind
         self.img_idx = img_idx
-        self.apply = effect  # type: Callable[[GameState], None]
+        self.effect = effect  # type: Callable[[GameState], None]
+
+    def apply(self, game_state):
+        self.effect(game_state)
+        game_state.powerups.append(self)
 
     @property
     def color(self):
         return self.kind.color
 
     def draw(self, display, center):
-        img = sprite(self.img_idx, round(Config().zoom) * 5)
+        img = sprite(self.img_idx, int(Config().zoom * 4))
         r = img.get_rect(center=center)
         display.blit(img, r)
 
@@ -81,7 +85,7 @@ def life_up(game: "GameState"):
 @make_powerup('Bigger bar', 'Size does matter sometimes...', good, 2, )
 def bigger_bar(game):
     for bar in game.get_all(Bar):
-        bar.size.x += Bar.START_SIZE[0] / 2
+        bar.size.x += Bar.START_SIZE[0] / 2 * Config().zoom
 
 
 @make_powerup('Smaller bar', 'A small bar teaches you to be more precise...', bad, 6, )
@@ -133,7 +137,7 @@ def clone_brick(game):
 def explosive_bricks(game):
     Config().bricks.add(12)
 
-@make_powerup('Mirror', "You have two left hands but swapping controls won't help", very_bad, 14)
+@make_powerup('Mirror', "You have two left hands but swapping controls won't help", very_bad, 10)
 def flip_controls(game):
     Config().flip_controls = not Config().flip_controls
 

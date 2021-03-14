@@ -10,18 +10,34 @@ from locals import Color, clamp, Config, get_img, get_level_surf, get_sound, pol
 scale = Config().scale
 
 
+def draw_diamond(display, pos, vel, scale, color):
+    dir = vel.normalize()
+    cross = pygame.Vector2(-dir.y, dir.x)
+    vertices = [
+        pos + dir * scale,
+        pos + cross * scale,
+        pos - dir * scale * 3,
+        pos - cross * scale,
+    ]
+    pygame.draw.polygon(display, color, vertices)
+
+
 class Particle(Object):
     DIAMOND = 0
     LINE = 1
 
     def __init__(self, pos, vel, lifespan, decay=0.95, size=2, color=Color.BRIGHTEST, shape=DIAMOND):
         super().__init__(pos, scale(size, size))
-        self.vel = pygame.Vector2(vel)
+        self.vel = pygame.Vector2(vel) * Config().zoom
         self.lifespan = lifespan
         self.age = 0
         self.decay = decay
         self.shape = shape
         self.color = color
+
+    def resize(self, old, new):
+        super().resize(old, new)
+        self.vel *= new.x / old.x
 
     def logic(self, state):
         self.age += 1
@@ -35,17 +51,9 @@ class Particle(Object):
 
         r = 5 * self.decay ** self.age
         if self.shape == self.DIAMOND:
-            dir = self.vel.normalize()
-            cross = pygame.Vector2(-dir.y, dir.x)
-            vertices = [
-                self.pos + dir * r,
-                self.pos + cross * r,
-                self.pos - dir * r * 2,
-                self.pos - cross * r,
-            ]
-            pygame.draw.polygon(display, self.color, vertices)
+            draw_diamond(display, self.pos, self.vel, r, self.color)
         elif self.shape == self.LINE:
-            pygame.draw.line(display, self.color, self.pos, self.pos + self.vel * 3, 3)
+            pygame.draw.line(display, self.color, self.pos, self.pos + self.vel * 3, round(self.size.x))
         else:
             pygame.draw.circle(display, self.color, self.pos, self.size.y)
 
@@ -148,13 +156,14 @@ class Bar(Object):
         keys = pygame.key.get_pressed()
         if any(keys[k] for k in self.K_LEFT):
             self.mouse_goal = None
-            self.pos.x -= self.velocity * self.flip
+            self.pos.x -= self.velocity * self.flip * Config().zoom
         if any(keys[k] for k in self.K_RIGHT):
             self.mouse_goal = None
-            self.pos.x += self.velocity * self.flip
+            self.pos.x += self.velocity * self.flip * Config().zoom
 
         if self.mouse_goal is not None:
-            self.pos.x += clamp(self.mouse_goal - self.pos.x, -self.velocity, self.velocity)
+            self.pos.x += clamp(self.mouse_goal - self.pos.x, -self.velocity * Config().zoom,
+                                self.velocity * Config().zoom)
 
         self.pos.x += Config().wind_speed
 
@@ -167,9 +176,10 @@ class Bar(Object):
     def draw(self, display):
         display.fill(Color.BRIGHTEST, self)
         pygame.draw.rect(display, Color.BRIGHT, self.rect, 2)
+        super().draw(display)
 
     def spawn_ball(self):
-        return Ball(self.rect.center + pygame.Vector2(0, -30), 90)
+        return Ball(self.rect.center + pygame.Vector2(0, -30), -90)
 
     def resize(self, old, new):
         y = self.pos.y + new.y - old.y
@@ -182,15 +192,16 @@ class Ball(Object):
     ANGLES = 16
 
     def __init__(self, center, angle=None):
-        pos = center - pygame.Vector2(self.RADIUS, self.RADIUS)
-        super().__init__(pos, scale(self.RADIUS * 2, self.RADIUS * 2))
+        size = scale(self.RADIUS, self.RADIUS) * 2
+        pos = center - size / 2
+        super().__init__(pos, size)
 
         if angle is None:
-            angle = gauss(90, 10)
+            angle = gauss(-90, 10)
         self.vel = polar(1, angle)
 
     def logic(self, state):
-        self.pos += self.vel * Config().ball_speed
+        self.pos += self.vel * Config().ball_speed * Config().zoom
         self.pos.x += Config().wind_speed
 
         if self.pos.x < 0:
@@ -255,7 +266,7 @@ class Ball(Object):
 
         # If the distance is less than the circle's radius, an intersection occurs
         norm2 = d.length_squared()
-        if norm2 >= (self.RADIUS ** 2):
+        if norm2 >= (self.size.x / 2) ** 2:  # .x == .y and is the diameter
             return None
 
         if closest == center:
@@ -285,6 +296,7 @@ class Ball(Object):
             n = normal.length()
 
             if n == 0:
+                # noinspection PyUnboundLocalVariable
                 return pygame.Vector2(normal_bkp)
 
             return normal / n
@@ -317,7 +329,7 @@ class EnemyBullet(Object):
         self.vel = pygame.Vector2(dir).normalize() * self.VELOCITY
 
     def logic(self, game):
-        self.pos += self.vel
+        self.pos += self.vel * Config().zoom
 
         # Bar collision
         for bar in game.get_all(Bar):
@@ -327,17 +339,20 @@ class EnemyBullet(Object):
                 for _ in range(self.EXPLOSION_PARTICLES):
                     game.add(Particle.death_particles(self.pos))
 
+        w, h = Config().size
+        if not self.rect.colliderect((0, 0, w, h)):
+            self.alive = False
+
     def draw(self, display):
         super().draw(display)
-        pygame.draw.line(display, Color.ORANGE, self.pos, self.pos - self.vel * 2, int(self.size.x))
-        display.fill(Color.ORANGE, self.rect)
+        draw_diamond(display, self.rect.center, self.vel, self.size.x, Color.ORANGE)
 
 
 class Bricks(Object):
-    PADDING_BOTTOM = 100
+    WINDOW_PROP = 0.8
 
     def __init__(self, lines=15, cols=15):
-        size = (Config().w, Config().h - self.PADDING_BOTTOM)
+        size = (Config().w, Config().h * self.WINDOW_PROP)
         super(Bricks, self).__init__((0, 0), size)
         self.lines = lines
         self.cols = cols
@@ -349,11 +364,12 @@ class Bricks(Object):
 
     def resize(self, old, new):
         super().resize(old, new)
-        self.size = pygame.Vector2(new.x, new.y - self.PADDING_BOTTOM)
+        self.size = pygame.Vector2(new.x, new.y * self.WINDOW_PROP)
 
         for (l, c), brick in self.all_bricks(True):
             brick.resize(old, new)
             brick.pos = self.to_screen(l, c)
+            brick.size = self.brick_size
 
     def __len__(self):
         return sum(1 for _ in self.all_bricks())
@@ -368,7 +384,7 @@ class Bricks(Object):
 
     @property
     def brick_size(self):
-        return self.col_width, self.line_height
+        return pygame.Vector2(self.col_width, self.line_height)
 
     def to_screen(self, line, col):
         return pygame.Vector2(
@@ -394,6 +410,7 @@ class Bricks(Object):
                 yield brick
 
     def draw(self, display):
+        super().draw(display)
         for brick in self.all_bricks():
             if brick is not None:
                 brick.draw(display)
@@ -457,9 +474,11 @@ class Brick(Object):
         display.fill(self.color, self.rect)
         pygame.draw.rect(display, Color.DARKEST, self.rect, 2)
         if self.SPRITE is not None:
-            img = sprite(self.SPRITE, round(2 * Config().zoom))
+            img = sprite(self.SPRITE, round(self.size.y / 16))
             r = img.get_rect(center=self.rect.center)
             display.blit(img, r)
+
+        super().draw(display)
 
     def hit(self, game, sound=True, damage=1):
         get_sound('hit').play()

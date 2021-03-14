@@ -74,7 +74,7 @@ class PickPowerUpState(State):
         pygame.gfxdraw.box(display, display.get_rect(), (0, 0, 0, 120), )
 
         y = self.h * 0.6
-        displacement = ease((self.timer - self.selected_at) / 15) * 50
+        displacement = ease((self.timer - self.selected_at) / 15) * 50 * Config().zoom
         for i, powerup in enumerate(self.powerups):
             if i == self.selected:
                 dy = displacement
@@ -97,3 +97,7 @@ class PickPowerUpState(State):
         powerup.apply(self.game_state)
         self.next_state = self.game_state
         self.game_state.next_state = self.game_state
+
+    def resize(self, old, new):
+        super(PickPowerUpState, self).resize(old, new)
+        self.game_state.resize(old, new)
