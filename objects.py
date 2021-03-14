@@ -5,7 +5,7 @@ from typing import List, Union
 import pygame
 
 from core import App, Object
-from locals import Color, clamp, Config, get_sound, polar
+from locals import Color, clamp, Config, get_level_surf, get_sound, polar
 
 
 class Particle(Object):
@@ -271,7 +271,7 @@ class EnemyBullet(Object):
 
 
 class Bricks(Object):
-    def __init__(self, lines, cols, size):
+    def __init__(self, size, lines=15, cols=15):
         super(Bricks, self).__init__((0, 0), size)
         self.lines = lines
         self.cols = cols
@@ -280,13 +280,6 @@ class Bricks(Object):
             [None] * cols
             for _ in range(lines)
         ]  # type: List[List[Union[None, Brick]]]
-
-        for c in range(lines // 3, 2 * lines // 3 + 1):
-            for l in range(4, 6):
-                # l = randrange(0, lines)
-                # c = randrange(0, cols)
-                if c != cols // 2:
-                    self.bricks[l][c] = Brick(self.grid_to_screen(l, c), self.brick_size)
 
     def __len__(self):
         return sum(1 for _ in self.all_bricks())
@@ -303,13 +296,13 @@ class Bricks(Object):
     def brick_size(self):
         return self.col_width, self.line_height
 
-    def grid_to_screen(self, line, col):
+    def to_screen(self, line, col):
         return pygame.Vector2(
             col * self.col_width,
             line * self.line_height
         )
 
-    def screen_to_grid(self, pos):
+    def to_grid(self, pos):
         return pos.x // self.col_width, pos.y // self.line_height
 
     def all_bricks(self, indices=False):
@@ -333,6 +326,27 @@ class Bricks(Object):
                     self.bricks[l][c] = None
                 else:
                     brick.logic(state)
+
+    @classmethod
+    def load(cls, size, level):
+        sprite = get_level_surf(level)
+        lvl = Bricks(size)
+        palette = list(sprite.get_palette())
+        for l in range(15):
+            for c in range(15):
+                color = sprite.get_at((c, l))
+                kind = palette.index(color)
+                print(kind)
+                # print(color, end=' ')
+                if kind != 0:
+                    lvl.bricks[l][c] = Brick(lvl.to_screen(l, c), lvl.brick_size)
+            # print()
+        return lvl
+
+    @classmethod
+    def random(cls, size):
+        idx = randrange(0, 12)
+        return cls.load(size, idx)
 
 
 class Brick(Object):

@@ -4,7 +4,7 @@ from time import time
 
 import pygame
 
-from locals import Color, Config, Files
+from locals import Color, Config, Files, VOLUME
 
 DEBUG = 0
 
@@ -145,7 +145,7 @@ class State:
         self.next_state = self
         if self.BG_MUSIC:
             pygame.mixer.music.load(Files.SOUNDS / self.BG_MUSIC)
-            pygame.mixer.music.set_volume(0.3)
+            pygame.mixer.music.set_volume(VOLUME['BG_MUSIC'])
             pygame.mixer.music.play(-1)
 
     def on_exit(self):

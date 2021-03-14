@@ -3,7 +3,7 @@ from random import random, shuffle
 import pygame
 
 from core import App, State
-from locals import Color, Config
+from locals import Color, Config, get_level_surf
 from objects import Bar, Bricks, Ball, Particle
 from powerups import auto_ball_spawn, enemy_fire, POWERUPS, wind
 from states.gameover import GameOverState
@@ -34,10 +34,14 @@ class GameState(State):
         GameState._INSTANCE = self
 
         self.bar = self.add(Bar(self.h - 30))
-        self.bricks = self.add(Bricks(15, 15, (self.w, self.h - 100)))
+        self.bricks = self.add(Bricks.load(self.level_size, 0))
         self.add(self.bar.spawn_ball())
 
         auto_ball_spawn.apply(self)
+
+    @property
+    def level_size(self):
+        return self.w, self.h - 40
 
     @classmethod
     def data(cls):
@@ -57,7 +61,7 @@ class GameState(State):
         if not self.bricks.alive:
             # We would like it to be after the line alive=False,
             # but then modifications of powerups would not apply directly
-            self.bricks = self.add(Bricks(17, 17, (self.w, self.h - 40)))
+            self.bricks = self.add(Bricks.random(self.level_size))
 
         super().logic()
         config = Config()
@@ -92,6 +96,8 @@ class GameState(State):
         self.draw_text(display, f"Score: {self.score}", topright=(self.w - 5, 3))
         self.draw_text(display, f"Level: {self.level}", topleft=(5, 3))
         self.draw_text(display, "<3" * self.lives, Color.ORANGE, midtop=(self.w / 2, 3))
+
+        display.blit(get_level_surf(0), (0, 0))
 
     def loose_life(self):
         self.lives -= 1

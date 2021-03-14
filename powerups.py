@@ -1,13 +1,11 @@
 from typing import Callable, TYPE_CHECKING
 
-import pygame
-
 from objects import Bar
 
 if TYPE_CHECKING:
     from states.game import GameState
 
-from locals import Color, Config, Files, sprite, sprite_sheet
+from locals import Color, Config, sprite
 
 POWERUPS = []
 

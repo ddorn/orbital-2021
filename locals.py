@@ -6,8 +6,9 @@ import pygame
 
 
 VOLUME = {
-    'bong': 0.5,
-    'hit': 0.2,
+    'BG_MUSIC': 0.8,
+    'bong': 1,
+    'hit': 1,
 }
 
 
@@ -32,16 +33,17 @@ def polar(r, phi):
     return vec
 
 
-@lru_cache
-def sprite_sheet():
-    return pygame.image.load(Files.SPRITE_SHEET)
+@lru_cache()
+def get_img(path):
+    return pygame.image.load(path)
+
 
 @lru_cache()
 def sprite(idx, scale=2):
     S = 16
     x = idx % 4
     y = idx // 4
-    img = sprite_sheet().subsurface(x * S, y * S, S, S)
+    img = get_img(Files.SPRITE_SHEET).subsurface(x * S, y * S, S, S)
     if scale > 1:
         img = pygame.transform.scale(img, (S * scale, S * scale))
     return img
@@ -52,6 +54,12 @@ def get_sound(name):
     sound = pygame.mixer.Sound(Files.SOUNDS / (name + '.wav'))
     sound.set_volume(VOLUME.get(name, 1))
     return sound
+
+@lru_cache()
+def get_level_surf(idx):
+    x = idx % 4
+    y = idx // 4
+    return get_img(Files.LEVELS).subsurface(x * 16, y * 16, 15, 15)
 
 
 class Config:
@@ -156,5 +164,6 @@ class Files:
     ASSETS = TOP / "assets"
     FONT = ASSETS / "fonts" / "ThaleahFat.ttf"
     SPRITE_SHEET = ASSETS / 'sprite_sheet.png'
+    LEVELS = ASSETS / "levels.png"
     SOUNDS = ASSETS / 'sounds'
 
