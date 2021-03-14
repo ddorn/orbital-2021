@@ -1,4 +1,5 @@
 from functools import lru_cache
+from operator import attrgetter
 from random import randint
 from time import time
 
@@ -8,6 +9,7 @@ from locals import Color, Config, DEBUG, Files, VOLUME
 
 
 class Object:
+    Z = 0
     def __init__(self, pos, size):
         self.pos = pygame.Vector2(pos)
         self.size = pygame.Vector2(size)
@@ -100,8 +102,10 @@ class State:
         if self.BG_COLOR:
             display.fill(self.BG_COLOR)
 
-        for object in self.objects:
-            object.draw(display)
+        for z in sorted(set(o.Z for o in self.objects)):
+            for obj in self.objects:
+                if z == obj.Z:
+                    obj.draw(display)
 
         if self.shake:
             s = 3

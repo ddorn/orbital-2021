@@ -7,7 +7,7 @@ from objects import Bar
 if TYPE_CHECKING:
     from states.game import GameState
 
-from locals import Color, Config, sprite
+from locals import Color, Config, sprite, weighted_choice
 
 POWERUPS = []
 
@@ -62,22 +62,14 @@ KINDS = [
 ]
 
 def random_kind():
-    cum = []
-    p = 0
-    for k in KINDS:
-        cum.append((k, p))
-        p += k.proba
-    cut = uniform(0, cum[-1][1])
-    for (k, p) in cum:
-        if p < cut:
-            return k
+    return weighted_choice([(k, k.proba) for k in KINDS])
 
-def random_powerup(maxi=3, kind=None):
-    if kind is None:
-        kind = random_kind()
-    pows = [p for p in POWERUPS if p.kind is kind]
-    shuffle(pows)
-    return pows[:maxi]
+def random_powerup(maxi=3, *kinds):
+    if not kinds:
+        kinds = KINDS
+    pows = [(p, p.kind.proba) for p in POWERUPS if p.kind in kinds]
+    print(kinds, pows)
+    return weighted_choice(pows, maxi)
 
 
 @make_powerup("Life up", "Soon even cats will be jalous !", good, 0, )
@@ -109,7 +101,7 @@ def speed_down(game):
         bar.velocity -= 0.5
 
 
-@make_powerup('Stronger bricks', 'All brick go to workout and need one more hit to pop.', bad, 3, )
+@make_powerup('Stronger bricks', 'All brick go to workout and need one more hit to pop.', very_bad, 3, )
 def stronger_bricks(game):
     Config().brick_life += 1
 
@@ -140,6 +132,8 @@ def clone_brick(game):
 def explosive_bricks(game):
     Config().bricks.add(12)
 
-
+@make_powerup('Mirror', "You have two left hands but swapping controls won't help", very_bad, 14)
+def flip_controls(game):
+    Config().flip_controls = not Config().flip_controls
 
 

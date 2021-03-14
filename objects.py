@@ -74,9 +74,50 @@ class Particle(Object):
         )
 
 
+class BackgroundShape(Object):
+    Z = -1
+
+    def __init__(self, pos, radius, color, shape=5):
+        size = (radius, radius)
+        super().__init__(pos, size)
+
+        self.color = color
+        self.sides = shape
+        self.angle = 0
+        self.vel = polar(gauss(2, 0.5), uniform(0, 360))
+
+    def logic(self, state):
+        self.pos += self.vel
+        self.angle += 2
+        r = self.size.x
+        w, h = Config().size
+        if self.pos.x < -r and self.vel.x < 0:
+            self.pos.x = w + r
+        elif self.pos.x > w and self.vel.x > 0:
+            self.pos.x = -r
+
+        if self.pos.y < -r and self.vel.y < 0:
+            self.pos.y = h + r
+        elif self.pos.y > h and self.vel.y > 0:
+            self.pos.y = -r
+
+    def draw(self, display):
+        super().draw(display)
+        points = [
+            self.rect.center + polar(self.size.x, self.angle + 360 / self.sides * i)
+            for i in range(self.sides)
+        ]
+        pygame.draw.polygon(display, self.color, points)
+
+    @classmethod
+    def random(cls):
+        w, h = Config().size
+        return cls((uniform(0, w), uniform(0, h)), gauss(30, 5), Color.DARK, randrange(3, 7))
+
+
 class Bar(Object):
     START_SIZE = (75, 12)
-    START_VELOCITY = 9
+    START_VELOCITY = 10
     K_LEFT = (pygame.K_LEFT, pygame.K_a, pygame.K_q)
     K_RIGHT = (pygame.K_RIGHT, pygame.K_d)
 
@@ -87,9 +128,15 @@ class Bar(Object):
         self.velocity = self.START_VELOCITY
         self.mouse_goal = None
 
+    @property
+    def flip(self):
+        return -1 if Config().flip_controls else 1
+
     def handle_mouse_event(self, event):
         if Config().mouse_control:
             x, _ = event.pos
+            if Config().flip_controls:
+                x = Config().w - x
             self.mouse_goal = clamp(
                 x - self.size.x / 2,
                 0,
@@ -100,10 +147,10 @@ class Bar(Object):
         keys = pygame.key.get_pressed()
         if any(keys[k] for k in self.K_LEFT):
             self.mouse_goal = None
-            self.pos.x -= self.velocity
+            self.pos.x -= self.velocity * self.flip
         if any(keys[k] for k in self.K_RIGHT):
             self.mouse_goal = None
-            self.pos.x += self.velocity
+            self.pos.x += self.velocity * self.flip
 
         if self.mouse_goal is not None:
             self.pos.x += clamp(self.mouse_goal - self.pos.x, -self.velocity, self.velocity)
@@ -126,6 +173,7 @@ class Bar(Object):
 
 class Ball(Object):
     RADIUS = 10
+    ANGLES = 16
 
     def __init__(self, center, angle=None):
         pos = center - pygame.Vector2(self.RADIUS, self.RADIUS)
@@ -159,7 +207,7 @@ class Ball(Object):
                 if self.rect_collision(br) is not None:
                     dx = (r.centerx - br.centerx) / br.width * 2  # proportion on the side
                     dx = clamp(dx, -0.8, 0.8)
-                    dx = round(8 * dx) / 8  # discrete steps like in the original game
+                    dx = round(self.ANGLES * dx) / self.ANGLES  # discrete steps like in the original game
 
                     angle = (-dx + 1) * 90
                     self.vel.from_polar((1, -angle))
@@ -254,7 +302,7 @@ class Ball(Object):
 
 
 class EnemyBullet(Object):
-    SIZE = (4, 7)
+    SIZE = (6, 2)
     EXPLOSION_PARTICLES = 100
     VELOCITY = 7
 
@@ -275,7 +323,7 @@ class EnemyBullet(Object):
 
     def draw(self, display):
         super().draw(display)
-        pygame.draw.line(display, Color.ORANGE, self.pos, self.pos - self.vel * 2, 4)
+        pygame.draw.line(display, Color.ORANGE, self.pos, self.pos - self.vel * 2, int(self.size.x))
         display.fill(Color.ORANGE, self.rect)
 
 
@@ -420,7 +468,13 @@ class Brick(Object):
     def logic(self, state):
         if Config().fire():
             bar = next(state.get_all(Bar))
-            state.add(EnemyBullet(self.pos, bar.rect.center - self.pos))
+            get_sound('pre-shot').play()
+
+            @state.add
+            @Schedule.at(+60)
+            def _():
+                get_sound('shot').play()
+                state.add(EnemyBullet(self.rect.center, bar.rect.center - self.pos))
 
 
 class BombBrick(Brick):
@@ -434,9 +488,10 @@ class BombBrick(Brick):
 
         level: Bricks = game.bricks
         x, y = level.to_grid(self.rect.center)
-        for brick in level.brick_range(x-1, y-1, 3, 3):
+        for brick in level.brick_range(x - 1, y - 1, 3, 3):
             if brick is not self:
                 brick.hit(game, sound=False, damage=3)
+
 
 class DoubleBrick(Brick):
     SPRITE = 17
@@ -446,3 +501,22 @@ class DoubleBrick(Brick):
     def hit(self, game, sound=True, damage=1):
         super(DoubleBrick, self).hit(game, sound, damage)
         game.add(Ball(self.rect.center))
+
+
+class Schedule(Object):
+    def __init__(self, func, delay):
+        super().__init__((0, 0), (0, 0))
+        self.func = func
+        self.delay = delay
+
+    def logic(self, state):
+        self.delay -= 1
+        if self.delay <= 0:
+            self.func()
+            self.alive = False
+
+    @classmethod
+    def at(cls, delay):
+        def wrapper(f):
+            return Schedule(f, delay)
+        return wrapper

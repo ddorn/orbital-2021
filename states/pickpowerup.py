@@ -62,6 +62,8 @@ class PickPowerUpState(State):
         self.timer += 1
 
     def pos_x(self, i):
+        if len(self.powerups) == 1:
+            return self.w / 2
         start = self.w * 0.2
         spacing = self.w * 0.6 / (len(self.powerups) - 1)
         return start + spacing * i

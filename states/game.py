@@ -4,7 +4,7 @@ import pygame
 
 from core import App, DEBUG, State
 from locals import Color, Config, get_level_surf
-from objects import Bar, Bricks, Ball, Particle
+from objects import BackgroundShape, Bar, Bricks, Ball, Particle
 from powerups import auto_ball_spawn, brick, enemy_fire, god_like, POWERUPS, random_powerup, very_bad, wind
 from states.gameover import GameOverState
 from states.pickpowerup import PickPowerUpState
@@ -12,13 +12,11 @@ from states.pickpowerup import PickPowerUpState
 pygame.init()
 
 
-class Data:
-    brick_life = 1
-
 
 class GameState(State):
     BG_COLOR = Color.DARKEST
     BG_MUSIC = 'ambience.wav'
+    BG_SHAPES = 10
     BALL_SPEED_GAIN = 0.5
     _INSTANCE = None
 
@@ -31,25 +29,26 @@ class GameState(State):
         self.level = 0
         self.lives = 3
 
-        self.data = Data()
+        self.powerups = []
+        self.score_level = 0
+
         GameState._INSTANCE = self
 
         self.bar = self.add(Bar(self.h - 30))
         self.bricks = self.add(Bricks.load(self.level_size, 0))
         self.add(self.bar.spawn_ball())
 
-        if DEBUG:
-            auto_ball_spawn.apply(self)
+        for _ in range(self.BG_SHAPES):
+            self.add(BackgroundShape.random())
+
+    def score_for_next_powerup(self):
+        if self.score_level == 0:
+            return 10
+        return 40 * self.score_level
 
     @property
     def level_size(self):
-        return self.w, self.h - 40
-
-    @classmethod
-    def data(cls):
-        if cls._INSTANCE:
-            return cls._INSTANCE.data
-        return Data()
+        return self.w, self.h - 100
 
     def handle_event(self, event):
         super(GameState, self).handle_event(event)
@@ -76,6 +75,9 @@ class GameState(State):
         if not list(self.get_all(Ball)):
             self.add(self.bar.spawn_ball())
             self.loose_life()
+
+        if self.score > self.score_for_next_powerup():
+            self.get_powerup()
 
         if config.wind:
             speed = config.wind_speed
@@ -112,6 +114,12 @@ class GameState(State):
             2: very_bad,
             3: god_like,
         }.get(self.level)
-        pows = random_powerup(kind=kind)
+        pows = random_powerup(3, kind) if kind else random_powerup(3)
+
         self.next_state = PickPowerUpState(self, pows)
         self.bricks.alive = False
+
+    def get_powerup(self):
+        self.score_level += 1
+        pows = random_powerup(3)
+        self.next_state = PickPowerUpState(self, pows)

@@ -1,10 +1,10 @@
 from functools import lru_cache
 from pathlib import Path
-from random import gauss, random
+from random import gauss, random, uniform
 
 import pygame
 
-DEBUG = 0
+DEBUG = 1
 VOLUME = {
     'BG_MUSIC': 0.8,
     'bong': 1,
@@ -19,10 +19,35 @@ def clamp(x, mini, maxi):
         return maxi
     return x
 
+
 def ease(x, mini=0.0, maxi=1.0):
     x = clamp(x, mini, maxi)
     x = (x - mini) / (maxi - mini)
-    return x ** 2 * (3 - 2*x)
+    return x ** 2 * (3 - 2 * x)
+
+
+def weighted_choice(items, count=1):
+    items = list(items)
+    print(count, len(items))
+    count = min(count, len(items))
+
+    choice = []
+    for _ in range(count):
+        cum = []
+        p = 0
+        for (item, proba) in items:
+            p += proba
+            cum.append((item, p))
+        cut = uniform(0, p)
+        for i, (item, p) in enumerate(cum):
+            if p > cut:
+                choice.append(item)
+                items.pop(i)
+                break
+
+    if count == 1:
+        return choice[0]
+    return choice
 
 
 def polar(r, phi):
@@ -55,6 +80,7 @@ def get_sound(name):
     sound.set_volume(VOLUME.get(name, 1))
     return sound
 
+
 @lru_cache()
 def get_level_surf(idx):
     x = idx % 4
@@ -78,10 +104,11 @@ class Config:
     def reset(self):
         self.timer = 0
 
-        self.mouse_control = 1
+        self.flip_controls = False
+
+        self.mouse_control = False
         self.ball_speed = 7
         self.brick_life = 1
-
 
         self.bricks = {10, 12} if DEBUG else set()
 
@@ -92,7 +119,7 @@ class Config:
         self._wind_start = 0
         self._wind_phase = 'const'
 
-        self.brick_fire_probability = 0
+        self.brick_fire_probability = 1
         self._last_fire = 0
 
         self.ball_spawn_level = 0
@@ -101,6 +128,7 @@ class Config:
     @property
     def w(self):
         return self.size[0]
+
     @property
     def h(self):
         return self.size[1]
@@ -124,10 +152,10 @@ class Config:
                 elif self._wind_speed_goal == 0:  # const -> up
                     self._wind_phase = 'up'
                     direction = (random() > 0.5) * 2 - 1
-                    self._wind_speed_goal = gauss(3, 0.2) * direction   # px/frame
+                    self._wind_speed_goal = gauss(3, 0.2) * direction  # px/frame
                     self._wind_end = self.timer + gauss(60 * 3, 30)  # 3s ± 0.5s
                     get_sound('wind').play()
-                else: # const -> down
+                else:  # const -> down
                     self._wind_phase = 'down'
                     self._wind_speed_goal = 0
                     self._wind_end = self.timer + gauss(60 * 3, 30)  # 3s ± 0.5s
@@ -146,7 +174,7 @@ class Config:
 
     def spawn_ball(self):
         # Spawn every 60s / level
-        if self.ball_spawn_level and self.timer > self._last_ball_spawn + 60*60 / (1 + self.ball_spawn_level):
+        if self.ball_spawn_level and self.timer > self._last_ball_spawn + 60 * 60 / (1 + self.ball_spawn_level):
             self._last_ball_spawn = self.timer
             return True
         return False
@@ -170,4 +198,3 @@ class Files:
     SPRITE_SHEET = ASSETS / 'sprite_sheet.png'
     LEVELS = ASSETS / "levels.png"
     SOUNDS = ASSETS / 'sounds'
-
