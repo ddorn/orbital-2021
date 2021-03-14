@@ -4,9 +4,7 @@ from time import time
 
 import pygame
 
-from locals import Color, Config, Files, VOLUME
-
-DEBUG = 0
+from locals import Color, Config, DEBUG, Files, VOLUME
 
 
 class Object:
@@ -35,7 +33,7 @@ class Object:
         pass
 
     def draw(self, display: pygame.Surface):
-        if DEBUG:
+        if DEBUG and False:
             pygame.draw.rect(display, 'red', (self.pos, self.size), 1)
 
     def on_death(self, game):
@@ -113,6 +111,10 @@ class State:
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
             self.on_key_down(event)
+        if event.type == pygame.MOUSEMOTION:
+            self.on_mouse_move(event)
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            self.on_click(event)
 
         for object in self.objects:
             object.handle_event(event)
@@ -130,6 +132,12 @@ class State:
         return rect
 
     def on_key_down(self, event):
+        pass
+
+    def on_click(self, event):
+        pass
+
+    def on_mouse_move(self, event):
         pass
 
     @staticmethod
@@ -150,6 +158,7 @@ class State:
 
     def on_exit(self):
         pass
+
 
 class App:
     SIZE = (800, 500)

@@ -2,7 +2,7 @@ from random import random, shuffle
 
 import pygame
 
-from core import App, State
+from core import App, DEBUG, State
 from locals import Color, Config, get_level_surf
 from objects import Bar, Bricks, Ball, Particle
 from powerups import auto_ball_spawn, enemy_fire, POWERUPS, wind
@@ -19,6 +19,7 @@ class Data:
 class GameState(State):
     BG_COLOR = Color.DARKEST
     BG_MUSIC = 'ambience.wav'
+    BALL_SPEED_GAIN = 0.5
     _INSTANCE = None
 
     def __init__(self, size):
@@ -37,7 +38,8 @@ class GameState(State):
         self.bricks = self.add(Bricks.load(self.level_size, 0))
         self.add(self.bar.spawn_ball())
 
-        auto_ball_spawn.apply(self)
+        if DEBUG:
+            auto_ball_spawn.apply(self)
 
     @property
     def level_size(self):
@@ -54,8 +56,11 @@ class GameState(State):
 
         if event.type == pygame.KEYDOWN:
             key = event.key
-            if key == pygame.K_SPACE:
-                self.add(self.bar.spawn_ball())
+            if DEBUG:
+                if key == pygame.K_SPACE:
+                    self.add(self.bar.spawn_ball())
+                elif key == pygame.K_n:
+                    self.end_level()
 
     def logic(self):
         if not self.bricks.alive:
@@ -81,11 +86,7 @@ class GameState(State):
             self.add(self.bar.spawn_ball())
 
         if len(self.bricks) < 3:
-            self.level += 1
-            shuffle(POWERUPS)
-            pows = POWERUPS[:3]
-            self.next_state = PickPowerUpState(self, pows)
-            self.bricks.alive = False
+            self.end_level()
 
         if self.lives <= 0:
             self.next_state = GameOverState(self.size, self.level, self.score)
@@ -102,3 +103,11 @@ class GameState(State):
     def loose_life(self):
         self.lives -= 1
         self.do_shake(12)
+
+    def end_level(self):
+        self.level += 1
+        Config().ball_speed += self.BALL_SPEED_GAIN
+        shuffle(POWERUPS)
+        pows = POWERUPS[:3]
+        self.next_state = PickPowerUpState(self, pows)
+        self.bricks.alive = False

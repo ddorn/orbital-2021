@@ -5,7 +5,7 @@ from typing import List, Union
 import pygame
 
 from core import App, Object
-from locals import Color, clamp, Config, get_level_surf, get_sound, polar
+from locals import Color, clamp, Config, get_img, get_level_surf, get_sound, polar, sprite
 
 
 class Particle(Object):
@@ -85,21 +85,28 @@ class Bar(Object):
         # x = pygame.mouse.get_pos()[0] - self.SIZE[0] / 2
         super().__init__((x, pos_y), self.START_SIZE)
         self.velocity = self.START_VELOCITY
+        self.mouse_goal = None
 
-    # def handle_mouse_event(self, event):
-    #     x, y = event.pos
-    #     self.pos.x = clamp(
-    #         x - self.size.x / 2,
-    #     0,
-    #     App.state().w - self.size.x
-    # )
+    def handle_mouse_event(self, event):
+        if Config().mouse_control:
+            x, _ = event.pos
+            self.mouse_goal = clamp(
+                x - self.size.x / 2,
+                0,
+                App.state().w - self.size.x
+            )
 
     def logic(self, state):
         keys = pygame.key.get_pressed()
         if any(keys[k] for k in self.K_LEFT):
+            self.mouse_goal = None
             self.pos.x -= self.velocity
         if any(keys[k] for k in self.K_RIGHT):
+            self.mouse_goal = None
             self.pos.x += self.velocity
+
+        if self.mouse_goal is not None:
+            self.pos.x += clamp(self.mouse_goal - self.pos.x, -self.velocity, self.velocity)
 
         self.pos.x += Config().wind_speed
 
@@ -114,20 +121,22 @@ class Bar(Object):
         pygame.draw.rect(display, Color.BRIGHT, self.rect, 2)
 
     def spawn_ball(self):
-        return Ball(self.rect.center + pygame.Vector2(0, -30))
+        return Ball(self.rect.center + pygame.Vector2(0, -30), 90)
 
 
 class Ball(Object):
-    VELOCITY = 7
     RADIUS = 10
 
-    def __init__(self, center):
+    def __init__(self, center, angle=None):
         pos = center - pygame.Vector2(self.RADIUS, self.RADIUS)
         super().__init__(pos, (self.RADIUS * 2, self.RADIUS * 2))
-        self.vel = pygame.Vector2(0, -self.VELOCITY)
+
+        if angle is None:
+            angle = gauss(90, 10)
+        self.vel = polar(1, angle)
 
     def logic(self, state):
-        self.pos += self.vel
+        self.pos += self.vel * Config().ball_speed
         self.pos.x += Config().wind_speed
 
         if self.pos.x < 0:
@@ -153,7 +162,7 @@ class Ball(Object):
                     dx = round(8 * dx) / 8  # discrete steps like in the original game
 
                     angle = (-dx + 1) * 90
-                    self.vel.from_polar((self.VELOCITY, -angle))
+                    self.vel.from_polar((1, -angle))
 
                     get_sound('bong').play()
 
@@ -303,7 +312,7 @@ class Bricks(Object):
         )
 
     def to_grid(self, pos):
-        return pos.x // self.col_width, pos.y // self.line_height
+        return pos[1] // self.line_height, pos[0] // self.col_width
 
     def all_bricks(self, indices=False):
         for l, line in enumerate(self.bricks):
@@ -313,6 +322,11 @@ class Bricks(Object):
                         yield (l, c), brick
                     else:
                         yield brick
+
+    def brick_range(self, x, y, w, h):
+        for (c, l), brick in self.all_bricks(True):
+            if x <= c < x + w and y <= l < y + h:
+                yield brick
 
     def draw(self, display):
         for brick in self.all_bricks():
@@ -336,12 +350,24 @@ class Bricks(Object):
             for c in range(15):
                 color = sprite.get_at((c, l))
                 kind = palette.index(color)
-                print(kind)
-                # print(color, end=' ')
-                if kind != 0:
-                    lvl.bricks[l][c] = Brick(lvl.to_screen(l, c), lvl.brick_size)
+                brick = lvl.make_brick(kind, l, c)
+                lvl.bricks[l][c] = brick
             # print()
         return lvl
+
+    def make_brick(self, kind, l, c):
+        if kind < 1:
+            return None
+        cls = {
+            5: Brick,
+            10: DoubleBrick,
+            12: BombBrick,
+        }[kind]
+
+        if kind not in Config().bricks:
+            cls = Brick
+
+        return cls(self.to_screen(l, c), self.brick_size)
 
     @classmethod
     def random(cls, size):
@@ -351,11 +377,13 @@ class Bricks(Object):
 
 class Brick(Object):
     PARTICLES = 6
+    SPRITE = None
+    SINGLE_HIT = False
 
     def __init__(self, pos, size):
         super().__init__(pos, size)
         self.color = Color.BRIGHT
-        self.life = Config().brick_life
+        self.life = Config().brick_life if not self.SINGLE_HIT else 1
 
     def __repr__(self):
         return f"<Brick({self.pos.x}, {self.pos.y})>"
@@ -363,10 +391,14 @@ class Brick(Object):
     def draw(self, display):
         display.fill(self.color, self.rect)
         pygame.draw.rect(display, Color.DARKEST, self.rect, 2)
+        if self.SPRITE is not None:
+            img = sprite(self.SPRITE, 2)
+            r = img.get_rect(center=self.rect.center)
+            display.blit(img, r)
 
-    def hit(self, game):
+    def hit(self, game, sound=True, damage=1):
         get_sound('hit').play()
-        self.life -= 1
+        self.life -= damage
         if self.life <= 0:
             self.alive = False
 
@@ -390,3 +422,27 @@ class Brick(Object):
             bar = next(state.get_all(Bar))
             state.add(EnemyBullet(self.pos, bar.rect.center - self.pos))
 
+
+class BombBrick(Brick):
+    SPRITE = 16
+    PARTICLES = 35
+    SINGLE_HIT = True
+
+    def hit(self, game, sound=True, damage=1):
+        get_sound('bomb').play()
+        super(BombBrick, self).hit(game, False)
+
+        level: Bricks = game.bricks
+        x, y = level.to_grid(self.rect.center)
+        for brick in level.brick_range(x-1, y-1, 3, 3):
+            if brick is not self:
+                brick.hit(game, sound=False, damage=3)
+
+class DoubleBrick(Brick):
+    SPRITE = 17
+    PARTICLES = 20
+    SINGLE_HIT = True
+
+    def hit(self, game, sound=True, damage=1):
+        super(DoubleBrick, self).hit(game, sound, damage)
+        game.add(Ball(self.rect.center))

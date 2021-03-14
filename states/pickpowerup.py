@@ -3,7 +3,7 @@ from typing import List
 import pygame
 
 from core import State
-from locals import clamp, Color, ease
+from locals import clamp, Color, Config, ease
 from powerups import Powerup
 
 
@@ -31,14 +31,27 @@ class PickPowerUpState(State):
             self._selected = value
             self.selected_at = self.timer
 
+    def on_mouse_move(self, event):
+        if Config().mouse_control:
+            best = 0
+            mini = 99999
+
+            for i in range(len(self.powerups)):
+                d = abs(self.pos_x(i) - event.pos[0])
+                if d < mini:
+                    mini = d
+                    best = i
+            self.selected = best
+
+    def on_click(self, event):
+        if Config().mouse_control:
+            self.validate()
+
     def on_key_down(self, event):
         if event.key == pygame.K_SPACE:
             # Avoid using multiple times a powerup
             if self.next_state == self:
-                powerup = self.powerups[self.selected]
-                powerup.apply(self.game_state)
-                self.next_state = self.game_state
-                self.game_state.next_state = self.game_state
+                self.validate()
         elif event.key == pygame.K_LEFT:
             self.selected -= 1
         elif event.key == pygame.K_RIGHT:
@@ -48,11 +61,14 @@ class PickPowerUpState(State):
         super().logic()
         self.timer += 1
 
+    def pos_x(self, i):
+        start = self.w * 0.2
+        spacing = self.w * 0.6 / (len(self.powerups) - 1)
+        return start + spacing * i
+
     def draw(self, display):
         self.game_state.draw(display)
 
-        start = self.w * 0.2
-        spacing = self.w * 0.6 / (len(self.powerups) - 1)
         y = self.h * 0.6
         displacement = ease((self.timer - self.selected_at) / 15) * 50
         for i, powerup in enumerate(self.powerups):
@@ -65,7 +81,7 @@ class PickPowerUpState(State):
             else:
                 dy = 0
 
-            x = start + spacing * i
+            x = self.pos_x(i)
             r = powerup.draw(display, (x, y - dy))
 
             color = powerup.color
@@ -73,4 +89,8 @@ class PickPowerUpState(State):
             if i == self.selected:
                 pygame.draw.line(display, color, r.bottomleft, r.bottomright)
 
-
+    def validate(self):
+        powerup = self.powerups[self.selected]
+        powerup.apply(self.game_state)
+        self.next_state = self.game_state
+        self.game_state.next_state = self.game_state

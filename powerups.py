@@ -44,6 +44,7 @@ bad = Color.ORANGE
 very_bad = 'red'
 good = Color.GREEN
 god_like = Color.GOLD
+brick = Color.MIDDLE
 
 
 @make_powerup("Life up", "Soon even cats will be jalous !", good, 0, )
@@ -66,13 +67,13 @@ def smaller_bar(game):
 @make_powerup('Speed up', "Turn into a wasp on steroids, one km/h at a time.", good, 1, )
 def speed_up(game):
     for bar in game.get_all(Bar):
-        bar.velocity += 1
+        bar.velocity += 2
 
 
 @make_powerup('Speed down', "Good luck caching up with the balls !", bad, 4, )
-def speed_up(game):
+def speed_down(game):
     for bar in game.get_all(Bar):
-        bar.velocity += 1
+        bar.velocity -= 0.5
 
 
 @make_powerup('Stronger bricks', 'All brick go to workout and need one more hit to pop.', bad, 3, )
@@ -93,3 +94,19 @@ def enemy_fire(game):
 @make_powerup('Ball spawn', 'Get a new ball every sometimes', god_like, 8)
 def auto_ball_spawn(game):
     Config().ball_spawn_level += 1
+
+@make_powerup('Mouse control', 'A good cat plays with the mouse', god_like, 9)
+def mouse_control(game):
+    Config().mouse_control = True
+
+@make_powerup('Clone brick', 'Spawn a new ball when broken', brick, 12)
+def clone_brick(game):
+    Config().bricks.add(10)
+
+@make_powerup('Explosive bricks', 'BOOOOOM', brick, 13)
+def explosive_bricks(game):
+    Config().bricks.add(12)
+
+
+
+

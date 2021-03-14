@@ -4,7 +4,7 @@ from random import gauss, random
 
 import pygame
 
-
+DEBUG = 1
 VOLUME = {
     'BG_MUSIC': 0.8,
     'bong': 1,
@@ -59,7 +59,7 @@ def get_sound(name):
 def get_level_surf(idx):
     x = idx % 4
     y = idx // 4
-    return get_img(Files.LEVELS).subsurface(x * 16, y * 16, 15, 15)
+    return get_img(Files.LEVELS).subsurface(x * 16, y * 16, 16, 16)
 
 
 class Config:
@@ -78,7 +78,12 @@ class Config:
     def reset(self):
         self.timer = 0
 
+        self.mouse_control = 1
+        self.ball_speed = 7
         self.brick_life = 1
+
+
+        self.bricks = {10, 12} if DEBUG else set()
 
         self.wind = False
         self.wind_speed = 0
@@ -142,7 +147,6 @@ class Config:
     def spawn_ball(self):
         # Spawn every 60s / level
         if self.ball_spawn_level and self.timer > self._last_ball_spawn + 60*60 / (1 + self.ball_spawn_level):
-            print(self._last_ball_spawn)
             self._last_ball_spawn = self.timer
             return True
         return False
@@ -154,7 +158,7 @@ class Color:
     ORANGE = "#ffa500"
     DARKEST = "#331727"
     DARK = "#440a67"
-    MIDDLE = '#"93329e"'
+    MIDDLE = '#93329e'
     BRIGHT = '#b4aee8'
     BRIGHTEST = '#ffe3fe'
 
