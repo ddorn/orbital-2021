@@ -1,4 +1,3 @@
-
 from math import sqrt
 from random import gauss, uniform
 from typing import List, Union
@@ -6,7 +5,7 @@ from typing import List, Union
 import pygame
 
 from core import App, Object
-from locals import Color, clamp
+from locals import Color, clamp, Config, polar
 
 
 class Particle(Object):
@@ -34,7 +33,7 @@ class Particle(Object):
             self.pos + cross * r,
             self.pos - dir * r * 2,
             self.pos - cross * r,
-            ]
+        ]
         pygame.draw.polygon(display, Color.BRIGHTEST, vertices)
 
         # pygame.draw.circle(display, Color.BRIGHTEST, self.pos, radius)
@@ -56,9 +55,9 @@ class Bar(Object):
     #     x, y = event.pos
     #     self.pos.x = clamp(
     #         x - self.size.x / 2,
-        #     0,
-        #     App.state().w - self.size.x
-        # )
+    #     0,
+    #     App.state().w - self.size.x
+    # )
 
     def logic(self, state):
         keys = pygame.key.get_pressed()
@@ -209,14 +208,12 @@ class Bricks(Object):
             for _ in range(lines)
         ]  # type: List[List[Union[None, Brick]]]
 
-        for c in range(lines // 3, 2 * lines // 3 + 1):
-            for l in range(4, 6):
-                # l = randrange(0, lines)
-                # c = randrange(0, cols)
-                if c != cols // 2:
-                    self.bricks[l][c] = Brick(self.grid_to_screen(l, c), self.brick_size)
-
-        print(self.bricks)
+        # for c in range(lines // 3, 2 * lines // 3 + 1):
+        #     for l in range(4, 6):
+        #         l = randrange(0, lines)
+        #         c = randrange(0, cols)
+        # if c != cols // 2:
+        #     self.bricks[l][c] = Brick(self.grid_to_screen(l, c), self.brick_size)
 
     def __len__(self):
         return sum(1 for _ in self.all_bricks())
@@ -268,6 +265,7 @@ class Brick(Object):
     def __init__(self, pos, size):
         super().__init__(pos, size)
         self.color = Color.BRIGHT
+        self.life = Config().brick_life
 
     def __repr__(self):
         return f"<Brick({self.pos.x}, {self.pos.y})>"
@@ -277,21 +275,21 @@ class Brick(Object):
         pygame.draw.rect(display, Color.DARKEST, self.rect, 2)
 
     def hit(self, game):
-        self.alive = False
+        self.life -= 1
+        if self.alive <= 0:
+            self.alive = False
 
-        from states.game import GameState
-        if isinstance(game, GameState):
-            game.score += 1
+            from states.game import GameState
+            if isinstance(game, GameState):
+                game.score += 1
 
-        for _ in range(self.PARTICLES):
-            vel = pygame.Vector2()
-            vel.from_polar((
-                gauss(13, 3),
-                uniform(0, 360)
-            ))
+            particles = self.PARTICLES
+        else:
+            particles = self.PARTICLES / 2
+
+        for _ in range(particles):
             game.add(Particle(
                 self.rect.center,
-                vel,
+                polar(gauss(13, 3), uniform(0, 360)),
                 15
             ))
-
