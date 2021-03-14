@@ -1,4 +1,5 @@
 from functools import lru_cache
+from random import randint
 from time import time
 
 import pygame
@@ -37,6 +38,9 @@ class Object:
         if DEBUG:
             pygame.draw.rect(display, 'red', (self.pos, self.size), 1)
 
+    def on_death(self, game):
+        pass
+
 
 class State:
     BG_COLOR = Color.DARKEST
@@ -47,6 +51,7 @@ class State:
         self.objects = set()
         self.size = pygame.Vector2(size)
         self.next_state = self
+        self.shake = 0
 
     @property
     def w(self):
@@ -89,14 +94,20 @@ class State:
         for object in self.objects:
             if not object.alive:
                 to_remove.add(object)
+                object.on_death(self)
         self.objects.difference_update(to_remove)
 
-    def draw(self, display):
+    def draw(self, display: pygame.Surface):
         if self.BG_COLOR:
             display.fill(self.BG_COLOR)
 
         for object in self.objects:
             object.draw(display)
+
+        if self.shake:
+            s = 3
+            display.scroll(randint(-s, s), randint(-s, s))
+            self.shake -= 1
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -125,6 +136,9 @@ class State:
     def get_font(size):
         return pygame.font.Font(Paths.FONT, size)
 
+    def do_shake(self, frames):
+        assert frames >= 0
+        self.shake += frames
 
 class App:
     SIZE = (800, 500)

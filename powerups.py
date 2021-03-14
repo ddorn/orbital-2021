@@ -33,9 +33,9 @@ class Powerup:
         return r
 
 
-def make_powerup(name, descr, color, img_path):
+def make_powerup(name, descr, color, img_idx):
     def wrapper(effect):
-        p = Powerup(name, descr, color, img_path, effect)
+        p = Powerup(name, descr, color, img_idx, effect)
         POWERUPS.append(p)
         return p
 
@@ -106,3 +106,7 @@ def stronger_bricks(game):
 @make_powerup('Wind', 'Wooooosh', very_bad, 5)
 def wind(game):
     Config().wind = True
+
+@make_powerup('American bricks', 'Gun control is inefficient... take cover !', very_bad, 7)
+def enemy_fire(game):
+    Config().brick_fire_probability += 1

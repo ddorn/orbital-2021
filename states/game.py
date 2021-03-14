@@ -5,7 +5,7 @@ import pygame
 from core import App, State
 from locals import Color, Config
 from objects import Bar, Bricks, Ball, Particle
-from powerups import POWERUPS, wind
+from powerups import enemy_fire, POWERUPS, wind
 from states.gameover import GameOverState
 from states.pickpowerup import PickPowerUpState
 
@@ -36,6 +36,8 @@ class GameState(State):
         self.bricks = self.add(Bricks(15, 15, (self.w, self.h - 100)))
         self.add(self.bar.spawn_ball())
 
+        enemy_fire.apply(self)
+
     @classmethod
     def data(cls):
         if cls._INSTANCE:
@@ -55,10 +57,10 @@ class GameState(State):
         config = Config()
         config.logic()
 
+        # No more balls, spawn one, loose life
         if not list(self.get_all(Ball)):
-            # No more balls, spawn one
             self.add(self.bar.spawn_ball())
-            self.lives -= 1
+            self.loose_life()
 
         if config.wind:
             speed = config.wind_speed
@@ -81,3 +83,7 @@ class GameState(State):
         self.draw_text(display, f"Score: {self.score}", topright=(self.w - 5, 3))
         self.draw_text(display, f"Level: {self.level}", topleft=(5, 3))
         self.draw_text(display, "<3" * self.lives, Color.ORANGE, midtop=(self.w / 2, 3))
+
+    def loose_life(self):
+        self.lives -= 1
+        self.do_shake(12)

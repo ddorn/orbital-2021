@@ -65,6 +65,9 @@ class Config:
         self._wind_start = 0
         self._wind_phase = 'const'
 
+        self.brick_fire_probability = 0
+        self._last_fire = 0
+
     @property
     def w(self):
         return self.size[0]
@@ -99,9 +102,16 @@ class Config:
                     self._wind_speed_goal = 0
                     self._wind_end = self.timer + gauss(60 * 3, 30)  # 3s ± 0.5s
 
+    def fire(self):
+        if not self.brick_fire_probability:
+            return False
 
-
-
+        if self.timer - self._last_fire < 60 * 3 * 1 / self.brick_fire_probability:
+            return False
+        t = random() < 0.001
+        if t:
+            self._last_fire = self.timer
+        return t
 
 
 class Color:

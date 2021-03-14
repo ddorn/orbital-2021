@@ -12,13 +12,14 @@ class Particle(Object):
     DIAMOND = 0
     LINE = 1
 
-    def __init__(self, pos, vel, lifespan, decay=0.95, size=2, shape=DIAMOND):
+    def __init__(self, pos, vel, lifespan, decay=0.95, size=2, color=Color.BRIGHTEST, shape=DIAMOND):
         super().__init__(pos, (size, size))
         self.vel = pygame.Vector2(vel)
         self.lifespan = lifespan
         self.age = 0
         self.decay = decay
         self.shape = shape
+        self.color = color
 
     def logic(self, state):
         self.age += 1
@@ -40,11 +41,11 @@ class Particle(Object):
                 self.pos - dir * r * 2,
                 self.pos - cross * r,
             ]
-            pygame.draw.polygon(display, Color.BRIGHTEST, vertices)
+            pygame.draw.polygon(display, self.color, vertices)
         elif self.shape == self.LINE:
-            pygame.draw.line(display, Color.BRIGHTEST, self.pos, self.pos + self.vel * 3, 3)
+            pygame.draw.line(display, self.color, self.pos, self.pos + self.vel * 3, 3)
         else:
-            pygame.draw.circle(display, Color.BRIGHTEST, self.pos, self.size.y)
+            pygame.draw.circle(display, self.color, self.pos, self.size.y)
 
     @classmethod
     def wind_particle(cls):
@@ -59,12 +60,22 @@ class Particle(Object):
         y = uniform(0, conf.h)
 
         return Particle(
-            (x, y), (speed * 5, 0), 9999, 1, randrange(1, 5), Particle.LINE
+            (x, y), (speed * 5, 0), 9999, 1,
+            size=randrange(1, 5),
+            shape=Particle.LINE,
+        )
+
+    @classmethod
+    def death_particles(cls, pos):
+        return Particle(
+            pos, polar(gauss(15, 3), uniform(0, 360)),
+            20,
+            color=Color.ORANGE,
         )
 
 
 class Bar(Object):
-    START_SIZE = (50, 10)
+    START_SIZE = (75, 12)
     START_VELOCITY = 9
     K_LEFT = (pygame.K_LEFT, pygame.K_a, pygame.K_q)
     K_RIGHT = (pygame.K_RIGHT, pygame.K_d)
@@ -223,6 +234,38 @@ class Ball(Object):
             #     self.RADIUS - norm  # penetration
             # )
 
+    def on_death(self, game):
+        game.do_shake(5)
+        nb = 10 if len(list(game.get_all(Ball))) > 1 else 45
+        for _ in range(nb):
+            game.add(Particle.death_particles(self.pos))
+
+
+class EnemyBullet(Object):
+    SIZE = (4, 7)
+    EXPLOSION_PARTICLES = 100
+    VELOCITY = 7
+
+    def __init__(self, pos, dir):
+        super().__init__(pos, self.SIZE)
+        self.vel = pygame.Vector2(dir).normalize() * self.VELOCITY
+
+    def logic(self, game):
+        self.pos += self.vel
+
+        # Bar collision
+        for bar in game.get_all(Bar):
+            if self.rect.colliderect(bar.rect):
+                game.loose_life()
+                self.alive = False
+                for _ in range(self.EXPLOSION_PARTICLES):
+                    game.add(Particle.death_particles(self.pos))
+
+    def draw(self, display):
+        super().draw(display)
+        pygame.draw.line(display, Color.ORANGE, self.pos, self.pos - self.vel * 2, 4)
+        display.fill(Color.ORANGE, self.rect)
+
 
 class Bricks(Object):
     def __init__(self, lines, cols, size):
@@ -282,8 +325,11 @@ class Bricks(Object):
 
     def logic(self, state):
         for (l, c), brick in self.all_bricks(True):
-            if brick is not None and not brick.alive:
-                self.bricks[l][c] = None
+            if brick is not None:
+                if not brick.alive:
+                    self.bricks[l][c] = None
+                else:
+                    brick.logic(state)
 
 
 class Brick(Object):
@@ -320,3 +366,9 @@ class Brick(Object):
                 polar(gauss(13, 3), uniform(0, 360)),
                 15
             ))
+
+    def logic(self, state):
+        if Config().fire():
+            bar = next(state.get_all(Bar))
+            state.add(EnemyBullet(self.pos, bar.rect.center - self.pos))
+
