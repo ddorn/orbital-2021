@@ -19,7 +19,7 @@ class Powerup:
         self.name = name
         self.descr = descr
         self.kind = kind
-        self.img = sprite(img_idx, 5)
+        self.img_idx = img_idx
         self.apply = effect  # type: Callable[[GameState], None]
 
     @property
@@ -27,10 +27,11 @@ class Powerup:
         return self.kind.color
 
     def draw(self, display, center):
-        r = self.img.get_rect(center=center)
-        display.blit(self.img, r)
+        img = sprite(self.img_idx, round(Config().zoom) * 5)
+        r = img.get_rect(center=center)
+        display.blit(img, r)
 
-        # r = pygame.Rect(0, 0, self.SIZE, self.SIZE)
+        # r = pygame.Rect(0, 0, self.size, self.size)
         # r.center = center
         # pygame.draw.rect(display, self.kind, r, 2, 4)
 
@@ -53,7 +54,7 @@ class Kind:
 
 very_bad = Kind('red', 1)
 god_like = Kind(Color.GOLD, 1)
-bad = Kind(Color.ORANGE, 5)
+bad = Kind(Color.ORANGE, 6)
 good = Kind(Color.GREEN, 4)
 brick = Kind(Color.MIDDLE, 1)
 

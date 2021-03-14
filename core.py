@@ -5,7 +5,7 @@ from time import time
 
 import pygame
 
-from locals import Color, Config, DEBUG, Files, VOLUME
+from locals import Color, Config, DEBUG, Files, vec2int, VOLUME
 
 
 class Object:
@@ -35,32 +35,40 @@ class Object:
         pass
 
     def draw(self, display: pygame.Surface):
-        if DEBUG and False:
+        if DEBUG:
             pygame.draw.rect(display, 'red', (self.pos, self.size), 1)
 
     def on_death(self, game):
         pass
+
+    def resize(self, old, new):
+        ratio = new.x / old.x
+        self.size *= ratio
+        self.pos *= ratio
 
 
 class State:
     BG_COLOR = Color.DARKEST
     BG_MUSIC = None
 
-    def __init__(self, size):
+    def __init__(self):
         self.add_later = []
         self.add_lock = False
         self.objects = set()
-        self.size = pygame.Vector2(size)
         self.next_state = self
         self.shake = 0
 
     @property
+    def size(self):
+        return Config().size
+
+    @property
     def w(self):
-        return self.size[0]
+        return Config().w
 
     @property
     def h(self):
-        return self.size[1]
+        return Config().h
 
     def add(self, object):
         if self.add_lock:
@@ -123,13 +131,10 @@ class State:
         for object in self.objects:
             object.handle_event(event)
 
-    def resize(self, new_size):
-        self.size = pygame.Vector2(new_size)
-
     def draw_text(self, surf, txt, color=Color.BRIGHTEST, size=32, **anchor):
         assert len(anchor) == 1
         # noinspection PyTypeChecker
-        tmp_surf = self.get_font(size).render(str(txt), 1, color, self.BG_COLOR)
+        tmp_surf = self.get_font(size * round(Config().zoom)).render(str(txt), 1, color)
         rect = tmp_surf.get_rect(**anchor)
         surf.blit(tmp_surf, rect)
 
@@ -163,22 +168,55 @@ class State:
     def on_exit(self):
         pass
 
+    def resize(self, old, new):
+        for obj in self.objects:
+            obj.resize(old, new)
+
 
 class App:
-    SIZE = (800, 500)
     FPS = 60
     CURRENT_APP = None
+    NAME = "Not a Brick Breaker"
+    SIZE = pygame.Vector2(800, 500)  # Design size
+    BORDER_COLOR = 'black'
 
     def __init__(self, initial_state):
-        Config().size = self.SIZE
-
         self.running = False
-        self.display = pygame.display.set_mode(self.SIZE)
         self.clock = pygame.time.Clock()
 
-        self.state = initial_state(self.SIZE)
 
         App.CURRENT_APP = self
+
+        self.real_size = pygame.Vector2(pygame.display.list_modes()[0])
+        self.view_port: pygame.Rect = None
+        self.display: pygame.Surface = None
+        self.real_display: pygame.Surface = None
+
+        # Open the window
+        self.set_display()
+        pygame.display.set_caption(self.NAME)
+
+        self.state = initial_state()
+
+    @property
+    def scale(self):
+        return min(self.real_size.x / self.SIZE.x, self.real_size.y / self.SIZE.y)
+
+    def set_display(self, size=None):
+        """Setup the display to a given size."""
+        real_size = pygame.Vector2(size or self.real_size)
+        self.real_display = pygame.display.set_mode(vec2int(real_size), pygame.RESIZABLE)
+        self.real_size = pygame.Vector2(self.real_display.get_size())
+        self.real_display.fill(self.BORDER_COLOR)
+
+        # We find the viewport so we have black border if the ratio do not match
+        area = self.SIZE * self.scale
+        rect = pygame.Rect((self.real_size - area) / 2, area)
+
+        self.view_port = rect
+        self.display = self.real_display.subsurface(rect)
+
+        Config().size = pygame.Vector2(self.view_port.size)
 
     def run(self):
         frame = 0
@@ -208,27 +246,12 @@ class App:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
+            elif event.type == pygame.VIDEORESIZE:
+                old = Config().size
+                self.set_display(event.size)
+                new = Config().size
+                self.state.resize(old, new)
 
             self.state.handle_event(event)
 
-    @classmethod
-    def app(cls):
-        return cls.CURRENT_APP
 
-    @classmethod
-    def state(cls):
-        return cls.CURRENT_APP.state
-
-    @classmethod
-    def width(cls):
-        if cls.CURRENT_APP:
-            return cls.CURRENT_APP.SIZE[0]
-        else:
-            return cls.SIZE[0]
-
-    @classmethod
-    def height(cls):
-        if cls.CURRENT_APP:
-            return cls.CURRENT_APP.SIZE[1]
-        else:
-            return cls.SIZE[1]

@@ -20,8 +20,8 @@ class GameState(State):
     BALL_SPEED_GAIN = 0.5
     _INSTANCE = None
 
-    def __init__(self, size):
-        super().__init__(size)
+    def __init__(self):
+        super().__init__()
 
         Config().reset()
 
@@ -35,7 +35,7 @@ class GameState(State):
         GameState._INSTANCE = self
 
         self.bar = self.add(Bar(self.h - 30))
-        self.bricks = self.add(Bricks.load(self.level_size, 0))
+        self.bricks = self.add(Bricks.load(0))
         self.add(self.bar.spawn_ball())
 
         for _ in range(self.BG_SHAPES):
@@ -44,7 +44,7 @@ class GameState(State):
     def score_for_next_powerup(self):
         if self.score_level == 0:
             return 10
-        return 40 * self.score_level
+        return 42 * self.score_level ** 1.5
 
     @property
     def level_size(self):
@@ -65,7 +65,7 @@ class GameState(State):
         if not self.bricks.alive:
             # We would like it to be after the line alive=False,
             # but then modifications of powerups would not apply directly
-            self.bricks = self.add(Bricks.random(self.level_size))
+            self.bricks = self.add(Bricks.random())
 
         super().logic()
         config = Config()
@@ -91,7 +91,7 @@ class GameState(State):
             self.end_level()
 
         if self.lives <= 0:
-            self.next_state = GameOverState(self.size, self.level, self.score)
+            self.next_state = GameOverState(self.level, self.score)
 
     def draw(self, display):
         super(GameState, self).draw(display)

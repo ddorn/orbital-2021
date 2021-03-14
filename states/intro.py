@@ -5,14 +5,16 @@ import pygame
 from core import State
 from locals import Color, polar
 from objects import Bar, Particle
+from powerups import POWERUPS, random_powerup
 from states.game import GameState
+from states.pickpowerup import PickPowerUpState
 
 
 class IntroState(State):
     BG_COLOR = Color.DARKEST
 
-    def __init__(self, size):
-        super().__init__(size)
+    def __init__(self):
+        super().__init__()
 
         self.ended = False
         self.timer = 0
@@ -34,7 +36,7 @@ class IntroState(State):
                 ))
 
         if self.ended:
-            self.next_state = GameState(self.size)
+            self.next_state = PickPowerUpState(GameState(), random_powerup(3))
 
     def handle_event(self, event):
         super(IntroState, self).handle_event(event)

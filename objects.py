@@ -7,13 +7,15 @@ import pygame
 from core import App, Object
 from locals import Color, clamp, Config, get_img, get_level_surf, get_sound, polar, sprite
 
+scale = Config().scale
+
 
 class Particle(Object):
     DIAMOND = 0
     LINE = 1
 
     def __init__(self, pos, vel, lifespan, decay=0.95, size=2, color=Color.BRIGHTEST, shape=DIAMOND):
-        super().__init__(pos, (size, size))
+        super().__init__(pos, scale(size, size))
         self.vel = pygame.Vector2(vel)
         self.lifespan = lifespan
         self.age = 0
@@ -78,8 +80,8 @@ class BackgroundShape(Object):
     Z = -1
 
     def __init__(self, pos, radius, color, shape=5):
-        size = (radius, radius)
-        super().__init__(pos, size)
+        size = (radius * 2, radius * 2)
+        super().__init__(pos, scale(size))
 
         self.color = color
         self.sides = shape
@@ -104,7 +106,7 @@ class BackgroundShape(Object):
     def draw(self, display):
         super().draw(display)
         points = [
-            self.rect.center + polar(self.size.x, self.angle + 360 / self.sides * i)
+            self.rect.center + polar(self.size.x / 2, self.angle + 360 / self.sides * i)
             for i in range(self.sides)
         ]
         pygame.draw.polygon(display, self.color, points)
@@ -122,9 +124,8 @@ class Bar(Object):
     K_RIGHT = (pygame.K_RIGHT, pygame.K_d)
 
     def __init__(self, pos_y):
-        x = App.width() / 2 - self.START_SIZE[0] / 2
-        # x = pygame.mouse.get_pos()[0] - self.SIZE[0] / 2
-        super().__init__((x, pos_y), self.START_SIZE)
+        x = Config().w / 2 - self.START_SIZE[0] / 2
+        super().__init__((x, pos_y), Config().scale(self.START_SIZE))
         self.velocity = self.START_VELOCITY
         self.mouse_goal = None
 
@@ -140,7 +141,7 @@ class Bar(Object):
             self.mouse_goal = clamp(
                 x - self.size.x / 2,
                 0,
-                App.state().w - self.size.x
+                Config().w - self.size.x
             )
 
     def logic(self, state):
@@ -160,7 +161,7 @@ class Bar(Object):
         self.pos.x = clamp(
             self.pos.x,
             0,
-            App.state().w - self.size.x
+            Config().w - self.size.x
         )
 
     def draw(self, display):
@@ -170,6 +171,11 @@ class Bar(Object):
     def spawn_ball(self):
         return Ball(self.rect.center + pygame.Vector2(0, -30), 90)
 
+    def resize(self, old, new):
+        y = self.pos.y + new.y - old.y
+        super().resize(old, new)
+        self.pos.y = y
+
 
 class Ball(Object):
     RADIUS = 10
@@ -177,7 +183,7 @@ class Ball(Object):
 
     def __init__(self, center, angle=None):
         pos = center - pygame.Vector2(self.RADIUS, self.RADIUS)
-        super().__init__(pos, (self.RADIUS * 2, self.RADIUS * 2))
+        super().__init__(pos, scale(self.RADIUS * 2, self.RADIUS * 2))
 
         if angle is None:
             angle = gauss(90, 10)
@@ -229,8 +235,8 @@ class Ball(Object):
     def draw(self, display):
         super(Ball, self).draw(display)
 
-        pygame.draw.circle(display, Color.BRIGHT, self.rect.center, self.RADIUS)
-        pygame.draw.circle(display, Color.BRIGHTEST, self.rect.center, self.RADIUS * 0.75)
+        pygame.draw.circle(display, Color.BRIGHT, self.rect.center, self.size.x / 2)
+        pygame.draw.circle(display, Color.BRIGHTEST, self.rect.center, self.size.x / 2 * 0.75)
 
     def rect_collision(self, rect):
         """Return the normal of the collision between a ball and a rect.
@@ -307,7 +313,7 @@ class EnemyBullet(Object):
     VELOCITY = 7
 
     def __init__(self, pos, dir):
-        super().__init__(pos, self.SIZE)
+        super().__init__(pos, scale(self.SIZE))
         self.vel = pygame.Vector2(dir).normalize() * self.VELOCITY
 
     def logic(self, game):
@@ -328,7 +334,10 @@ class EnemyBullet(Object):
 
 
 class Bricks(Object):
-    def __init__(self, size, lines=15, cols=15):
+    PADDING_BOTTOM = 100
+
+    def __init__(self, lines=15, cols=15):
+        size = (Config().w, Config().h - self.PADDING_BOTTOM)
         super(Bricks, self).__init__((0, 0), size)
         self.lines = lines
         self.cols = cols
@@ -337,6 +346,14 @@ class Bricks(Object):
             [None] * cols
             for _ in range(lines)
         ]  # type: List[List[Union[None, Brick]]]
+
+    def resize(self, old, new):
+        super().resize(old, new)
+        self.size = pygame.Vector2(new.x, new.y - self.PADDING_BOTTOM)
+
+        for (l, c), brick in self.all_bricks(True):
+            brick.resize(old, new)
+            brick.pos = self.to_screen(l, c)
 
     def __len__(self):
         return sum(1 for _ in self.all_bricks())
@@ -390,9 +407,9 @@ class Bricks(Object):
                     brick.logic(state)
 
     @classmethod
-    def load(cls, size, level):
+    def load(cls, level):
         sprite = get_level_surf(level)
-        lvl = Bricks(size)
+        lvl = Bricks()
         palette = list(sprite.get_palette())
         for l in range(15):
             for c in range(15):
@@ -418,9 +435,9 @@ class Bricks(Object):
         return cls(self.to_screen(l, c), self.brick_size)
 
     @classmethod
-    def random(cls, size):
+    def random(cls):
         idx = randrange(0, 12)
-        return cls.load(size, idx)
+        return cls.load(idx)
 
 
 class Brick(Object):
@@ -440,7 +457,7 @@ class Brick(Object):
         display.fill(self.color, self.rect)
         pygame.draw.rect(display, Color.DARKEST, self.rect, 2)
         if self.SPRITE is not None:
-            img = sprite(self.SPRITE, 2)
+            img = sprite(self.SPRITE, round(2 * Config().zoom))
             r = img.get_rect(center=self.rect.center)
             display.blit(img, r)
 
@@ -519,4 +536,5 @@ class Schedule(Object):
     def at(cls, delay):
         def wrapper(f):
             return Schedule(f, delay)
+
         return wrapper

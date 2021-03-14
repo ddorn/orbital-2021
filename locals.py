@@ -57,6 +57,8 @@ def polar(r, phi):
     vec.from_polar((r, phi))
     return vec
 
+def vec2int(vec):
+    return int(round(vec[0])), int(round(vec[1]))
 
 @lru_cache()
 def get_img(path):
@@ -119,7 +121,7 @@ class Config:
         self._wind_start = 0
         self._wind_phase = 'const'
 
-        self.brick_fire_probability = 1
+        self.brick_fire_probability = 0
         self._last_fire = 0
 
         self.ball_spawn_level = 0
@@ -132,6 +134,14 @@ class Config:
     @property
     def h(self):
         return self.size[1]
+
+    @property
+    def zoom(self):
+        from core import App
+        return max(self.w / App.SIZE[0], self.h / App.SIZE[1])
+
+    def scale(self, *size):
+        return self.zoom * pygame.Vector2(*size)
 
     def logic(self):
         self.timer += 1

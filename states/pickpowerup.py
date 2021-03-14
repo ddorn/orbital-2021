@@ -1,6 +1,7 @@
 from typing import List
 
 import pygame
+import pygame.gfxdraw
 
 from core import State
 from locals import clamp, Color, Config, ease
@@ -11,7 +12,7 @@ class PickPowerUpState(State):
     bg_color = None
 
     def __init__(self, game_state, powerups: List[Powerup]):
-        super(PickPowerUpState, self).__init__(game_state.size)
+        super(PickPowerUpState, self).__init__()
         self.game_state = game_state
         self.powerups = powerups
         self._selected = 0
@@ -70,13 +71,13 @@ class PickPowerUpState(State):
 
     def draw(self, display):
         self.game_state.draw(display)
+        pygame.gfxdraw.box(display, display.get_rect(), (0, 0, 0, 120), )
 
         y = self.h * 0.6
         displacement = ease((self.timer - self.selected_at) / 15) * 50
         for i, powerup in enumerate(self.powerups):
             if i == self.selected:
                 dy = displacement
-                pygame.draw.rect(display, Color.DARKEST, (0, self.h - 100, self.w, 50))
                 self.draw_text(display, powerup.descr, Color.BRIGHT, midbottom=(self.w / 2, self.h - 50))
             elif i == self.last_selected:
                 dy = 50 - displacement

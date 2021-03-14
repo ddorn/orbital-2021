@@ -5,8 +5,8 @@ from locals import Color
 
 
 class GameOverState(State):
-    def __init__(self, size, level, score):
-        super().__init__(size)
+    def __init__(self, level, score):
+        super().__init__()
 
         self.timer = 0
         self.level = level
@@ -15,7 +15,7 @@ class GameOverState(State):
     def on_key_down(self, event):
         if event.key == pygame.K_SPACE:
             from states.game import GameState
-            self.next_state = GameState(self.size)
+            self.next_state = GameState()
 
     def logic(self):
         super(GameOverState, self).logic()
