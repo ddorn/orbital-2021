@@ -5,9 +5,10 @@ from typing import List, Union
 import pygame
 
 from core import App, Object
-from locals import Color, clamp, Config, get_img, get_level_surf, get_sound, polar, sprite
+from locals import Color, clamp, Config, get_img, get_level_surf, get_sound, get_text, polar, sprite
 
-scale = Config().scale
+config = Config()
+scale = config.scale
 
 
 def draw_diamond(display, pos, vel, scale, color):
@@ -25,6 +26,7 @@ def draw_diamond(display, pos, vel, scale, color):
 class Particle(Object):
     DIAMOND = 0
     LINE = 1
+    Z = 1
 
     def __init__(self, pos, vel, lifespan, decay=0.95, size=2, color=Color.BRIGHTEST, shape=DIAMOND):
         super().__init__(pos, scale(size, size))
@@ -82,6 +84,26 @@ class Particle(Object):
             20,
             color=Color.ORANGE,
         )
+
+
+class TextParticle(Particle):
+    def __init__(self, txt, pos, vel, lifespan=30, decay=1, size=16, color=Color.GOLD):
+        super().__init__(pos, vel, lifespan, decay, color=color)
+        self.txt = txt
+        self.surf = get_text(txt, color, config.iscale(size))
+        self.font_size = size
+
+    def resize(self, old, new):
+        super().resize(old, new)
+        self.surf = get_text(self.txt, self.color, config.iscale(self.font_size))
+
+    def logic(self, state):
+        super().logic(state)
+
+    def draw(self, display):
+        r = self.surf.get_rect(center=self.pos)
+        display.blit(self.surf, r)
+        Object.draw(self, display)
 
 
 class BackgroundShape(Object):
@@ -493,7 +515,8 @@ class Brick(Object):
 
             from states.game import GameState
             if isinstance(game, GameState):
-                game.score += 1
+                score = game.increase_score()
+                game.add(TextParticle(f"+{score}", self.rect.center, (0, -1)))
 
             particles = self.PARTICLES
         else:
@@ -511,11 +534,13 @@ class Brick(Object):
             bar = next(state.get_all(Bar))
             get_sound('pre-shot').play()
 
+            # Compute earlier, it is more forgiving
+            dir = bar.rect.center - self.pos
             @state.add
             @Schedule.at(+60)
             def _():
                 get_sound('shot').play()
-                state.add(EnemyBullet(self.rect.center, bar.rect.center - self.pos))
+                state.add(EnemyBullet(self.rect.center, dir))
 
 
 class BombBrick(Brick):

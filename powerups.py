@@ -63,13 +63,14 @@ def make_powerup(name, descr, kind, img_idx, **kwargs):
 class Kind:
     color: str
     proba: int
+    value: int  # How positive
 
 
-very_bad = Kind('red', 1)
-god_like = Kind(Color.GOLD, 1)
-bad = Kind(Color.ORANGE, 6)
-good = Kind(Color.GREEN, 4)
-brick = Kind(Color.MIDDLE, 1)
+very_bad = Kind('red', 1, -3)
+god_like = Kind(Color.GOLD, 1, 3)
+bad = Kind(Color.ORANGE, 6, -1)
+good = Kind(Color.GREEN, 4, 1)
+brick = Kind(Color.MIDDLE, 1, 3)
 
 KINDS = [
     bad, very_bad, good, god_like, brick

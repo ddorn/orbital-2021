@@ -58,8 +58,10 @@ def polar(r, phi):
     vec.from_polar((r, phi))
     return vec
 
+
 def vec2int(vec):
     return int(round(vec[0])), int(round(vec[1]))
+
 
 @lru_cache()
 def get_img(path):
@@ -89,6 +91,27 @@ def get_level_surf(idx):
     x = idx % 4
     y = idx // 4
     return get_img(Files.LEVELS).subsurface(x * 16, y * 16, 16, 16)
+
+
+@lru_cache()
+def get_font(size):
+    return pygame.font.Font(Files.FONT, size)
+
+
+@lru_cache(maxsize=100)
+def get_text(txt, color, size):
+    if color is None:
+        color = Color.BRIGHTEST
+    # noinspection PyTypeChecker
+    return get_font(size * round(Config().zoom)).render(str(txt), 1, color)
+
+
+def draw_text(surf, txt, color=None, size=32, **anchor):
+    assert len(anchor) == 1
+    tmp_surf = get_text(txt, color, size)
+    rect = tmp_surf.get_rect(**anchor)
+    surf.blit(tmp_surf, rect)
+    return rect
 
 
 class Config:
@@ -141,11 +164,13 @@ class Config:
 
         from core import App
         zoom = min(self.w / App.SIZE[0], self.h / App.SIZE[1])
-        if DEBUG: print(zoom)
         return zoom
 
     def scale(self, *size):
         return self.zoom * pygame.Vector2(*size)
+
+    def iscale(self, value: int):
+        return round(self.zoom * value)
 
     def logic(self):
         self.timer += 1

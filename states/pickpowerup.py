@@ -3,7 +3,7 @@ import pygame.gfxdraw
 
 from core import State
 from locals import Color, Config, ease, weighted_choice
-from powerups import bad, brick, god_like, good, random_powerup, very_bad
+from powerups import bad, brick, god_like, good, KINDS, POWERUPS, random_powerup, very_bad
 
 
 class PickPowerUpState(State):
@@ -13,10 +13,13 @@ class PickPowerUpState(State):
         super(PickPowerUpState, self).__init__()
         self.game_state = game_state
         if not kinds:
-            kinds = weighted_choice([
+            options = [
                 ((very_bad, bad), 1),
                 ((good, god_like, brick), 1),
-            ])
+                (KINDS, 2)
+            ]
+            kinds = weighted_choice(options)
+
         self.powerups = random_powerup(3, *kinds, game=game_state)
         self._selected = 0
         self.selected_at = 0

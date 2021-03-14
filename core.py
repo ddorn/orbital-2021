@@ -5,7 +5,7 @@ from time import time
 
 import pygame
 
-from locals import Color, Config, DEBUG, Files, vec2int, VOLUME
+from locals import Color, Config, DEBUG, draw_text, Files, vec2int, VOLUME
 
 
 class Object:
@@ -131,14 +131,14 @@ class State:
         for object in self.objects:
             object.handle_event(event)
 
-    def draw_text(self, surf, txt, color=Color.BRIGHTEST, size=32, **anchor):
-        assert len(anchor) == 1
-        # noinspection PyTypeChecker
-        tmp_surf = self.get_font(size * round(Config().zoom)).render(str(txt), 1, color)
-        rect = tmp_surf.get_rect(**anchor)
-        surf.blit(tmp_surf, rect)
+    # For compatibility wiiith the rest of the code
+    def draw_text(self, surf, txt, color=None, size=32, **anchor):
+        return draw_text(surf, txt, color, size, **anchor)
 
-        return rect
+    @staticmethod
+    @lru_cache()
+    def get_font(size):
+        return pygame.font.Font(Files.FONT, size)
 
     def on_key_down(self, event):
         pass
@@ -148,11 +148,6 @@ class State:
 
     def on_mouse_move(self, event):
         pass
-
-    @staticmethod
-    @lru_cache()
-    def get_font(size):
-        return pygame.font.Font(Files.FONT, size)
 
     def do_shake(self, frames):
         assert frames >= 0

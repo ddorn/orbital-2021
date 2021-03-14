@@ -3,9 +3,9 @@ from random import random
 import pygame
 
 from core import DEBUG, State
-from locals import Color, Config, get_level_surf
+from locals import clamp, Color, Config, get_level_surf
 from objects import BackgroundShape, Ball, Bar, Bricks, Particle
-from powerups import brick, god_like, very_bad
+from powerups import bad, brick, god_like, good, very_bad
 from states.gameover import GameOverState
 from states.pickpowerup import PickPowerUpState
 
@@ -37,11 +37,6 @@ class GameState(State):
 
         for _ in range(self.BG_SHAPES):
             self.add(BackgroundShape.random())
-
-    def score_for_next_powerup(self):
-        if self.score_level == 0:
-            return 10
-        return 42 * self.score_level ** 1.5
 
     @property
     def level_size(self):
@@ -118,3 +113,19 @@ class GameState(State):
     def get_powerup(self):
         self.score_level += 1
         self.next_state = PickPowerUpState(self)
+
+    def score_for_next_powerup(self):
+        return {
+            0: 100,
+            1: 250,
+            2: 500
+        }.get(self.score_level,
+              500 * self.score_level * int(1 + self.score_level / 10)
+              )
+
+    def increase_score(self):
+        bonus = sum(p.kind.value for p in self.powerups)
+
+        ds = max(10 - bonus // 2, 2)
+        self.score += ds
+        return ds
