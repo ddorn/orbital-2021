@@ -68,6 +68,9 @@ class Config:
         self.brick_fire_probability = 0
         self._last_fire = 0
 
+        self.ball_spawn_level = 0
+        self._last_ball_spawn = -9999
+
     @property
     def w(self):
         return self.size[0]
@@ -113,8 +116,17 @@ class Config:
             self._last_fire = self.timer
         return t
 
+    def spawn_ball(self):
+        # Spawn every 60s / level
+        if self.ball_spawn_level and self.timer > self._last_ball_spawn + 60*60 / (1 + self.ball_spawn_level):
+            print(self._last_ball_spawn)
+            self._last_ball_spawn = self.timer
+            return True
+        return False
+
 
 class Color:
+    GOLD = "#FFD700"
     GREEN = "#7ED16F"
     ORANGE = "#ffa500"
     DARKEST = "#331727"

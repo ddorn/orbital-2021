@@ -45,6 +45,7 @@ def make_powerup(name, descr, color, img_idx):
 bad = Color.ORANGE
 very_bad = 'red'
 good = Color.GREEN
+god_like = Color.GOLD
 
 
 @make_powerup(
@@ -110,3 +111,7 @@ def wind(game):
 @make_powerup('American bricks', 'Gun control is inefficient... take cover !', very_bad, 7)
 def enemy_fire(game):
     Config().brick_fire_probability += 1
+
+@make_powerup('Ball spawn', 'Get a new ball every sometimes', god_like, 8)
+def auto_ball_spawn(game):
+    Config().ball_spawn_level += 1

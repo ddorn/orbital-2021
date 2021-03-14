@@ -5,7 +5,7 @@ import pygame
 from core import App, State
 from locals import Color, Config
 from objects import Bar, Bricks, Ball, Particle
-from powerups import enemy_fire, POWERUPS, wind
+from powerups import auto_ball_spawn, enemy_fire, POWERUPS, wind
 from states.gameover import GameOverState
 from states.pickpowerup import PickPowerUpState
 
@@ -36,7 +36,7 @@ class GameState(State):
         self.bricks = self.add(Bricks(15, 15, (self.w, self.h - 100)))
         self.add(self.bar.spawn_ball())
 
-        enemy_fire.apply(self)
+        auto_ball_spawn.apply(self)
 
     @classmethod
     def data(cls):
@@ -66,6 +66,9 @@ class GameState(State):
             speed = config.wind_speed
             if speed and random() < abs(speed) / 3 / 10:
                 self.add(Particle.wind_particle())
+
+        if config.spawn_ball():
+            self.add(self.bar.spawn_ball())
 
         if len(self.bricks) < 3:
             shuffle(POWERUPS)
