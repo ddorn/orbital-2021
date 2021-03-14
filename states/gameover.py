@@ -3,7 +3,7 @@ from typing import List
 import pygame
 
 from core import State
-from locals import Color, Config
+from locals import Color, Config, settings
 from powerups import Powerup
 
 
@@ -12,6 +12,8 @@ class GameOverState(State):
     def __init__(self, level, score, powerups):
         super().__init__()
 
+        if score > settings.highscore:
+            settings.highscore = score
         self.timer = 0
         self.level = level
         self.score = score

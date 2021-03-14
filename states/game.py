@@ -3,15 +3,14 @@ from random import random
 import pygame
 
 from core import DEBUG, State
-from locals import clamp, Color, Config, get_level_surf
+from locals import Color, Config, get_level_surf, settings
 from objects import BackgroundShape, Ball, Bar, Bricks, Particle
-from powerups import bad, brick, god_like, good, very_bad
+from powerups import brick, god_like, very_bad
 from states.gameover import GameOverState
 from states.pause import PauseState
 from states.pickpowerup import PickPowerUpState
 
 pygame.init()
-
 
 
 class GameState(State):
@@ -24,6 +23,7 @@ class GameState(State):
         super().__init__()
 
         Config().reset()
+        settings.games += 1
 
         self.score = 0
         self.level = 0
@@ -127,7 +127,14 @@ class GameState(State):
 
     def increase_score(self):
         bonus = sum(p.kind.value for p in self.powerups)
+        if bonus > 0:
+            bonus = -bonus // 2
+        else:
+            bonus = -bonus
 
-        ds = max(10 - bonus // 2, 2)
+        ds = max(10 + bonus, 2)
+        if ds > 10:
+            ds += ds - 10
         self.score += ds
+        settings.total_score += ds
         return ds

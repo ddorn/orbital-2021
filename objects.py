@@ -5,7 +5,7 @@ from typing import List, Union
 import pygame
 
 from core import App, Object
-from locals import Color, clamp, Config, get_img, get_level_surf, get_sound, get_text, polar, sprite
+from locals import Color, clamp, Config, get_img, get_level_surf, get_sound, get_text, polar, settings, sprite
 
 config = Config()
 scale = config.scale
@@ -335,6 +335,7 @@ class Ball(Object):
             # )
 
     def on_death(self, game):
+        settings.balls_lost += 1
         game.do_shake(5)
         nb = 10 if len(list(game.get_all(Ball))) > 1 else 45
         for _ in range(nb):
@@ -356,6 +357,7 @@ class EnemyBullet(Object):
         # Bar collision
         for bar in game.get_all(Bar):
             if self.rect.colliderect(bar.rect):
+                settings.bullet_hit += 1
                 game.loose_life()
                 self.alive = False
                 for _ in range(self.EXPLOSION_PARTICLES):
@@ -483,7 +485,6 @@ class Bricks(Object):
         idx = randrange(0, 12)
         return cls.load(idx)
 
-
 class Brick(Object):
     PARTICLES = 6
     SPRITE = None
@@ -511,6 +512,7 @@ class Brick(Object):
         get_sound('hit').play()
         self.life -= damage
         if self.life <= 0:
+            settings.bricks_destroyed += 1
             self.alive = False
 
             from states.game import GameState
@@ -551,6 +553,7 @@ class BombBrick(Brick):
     def hit(self, game, sound=True, damage=1):
         if not self.alive:
             return
+        settings.explosions += 1
         get_sound('bomb').play()
         super(BombBrick, self).hit(game, False)
 
@@ -559,7 +562,6 @@ class BombBrick(Brick):
         for brick in level.brick_range(x - 1, y - 1, 3, 3):
             if brick is not self:
                 brick.hit(game, sound=False, damage=3)
-
 
 class DoubleBrick(Brick):
     SPRITE = 17

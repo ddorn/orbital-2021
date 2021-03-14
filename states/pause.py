@@ -31,6 +31,7 @@ class PauseState(State):
 
     def edit(self, change=0.0):
         value = clamp(self.value_of(self.index) + change, 0, 1)
+        value = round(value, 2)
         setattr(Settings(), self.settings[self.index], value)
 
     def draw(self, display):

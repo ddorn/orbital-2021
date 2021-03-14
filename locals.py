@@ -246,8 +246,11 @@ class Settings:
         self.highscore = 0
         self.total_score = 0
         self.explosions = 0
+        self.bricks_destroyed = 0
         self.balls_lost = 0
+        self.bullet_hit = 0
         self.time_played = 0
+        self.powerups = 0
 
     def load(self):
         if Files.SETTINGS.exists():
@@ -278,3 +281,7 @@ class Files:
     LEVELS = ASSETS / "levels.png"
     SOUNDS = ASSETS / 'sounds'
     SETTINGS = TOP / 'settings.json'
+
+
+config = Config()
+settings = Settings()

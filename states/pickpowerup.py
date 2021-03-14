@@ -2,7 +2,7 @@ import pygame
 import pygame.gfxdraw
 
 from core import State
-from locals import Color, Config, ease, weighted_choice
+from locals import Color, Config, ease, settings, weighted_choice
 from powerups import bad, brick, god_like, good, KINDS, POWERUPS, random_powerup, very_bad
 
 
@@ -84,7 +84,7 @@ class PickPowerUpState(State):
         for i, powerup in enumerate(self.powerups):
             if i == self.selected:
                 dy = displacement
-                self.draw_text(display, powerup.descr, Color.BRIGHT, midbottom=(self.w / 2, self.h - 50))
+                self.draw_text(display, powerup.descr, Color.BRIGHTEST, midbottom=(self.w / 2, self.h - 50))
             elif i == self.last_selected:
                 dy = 50 - displacement
             else:
@@ -103,6 +103,7 @@ class PickPowerUpState(State):
         powerup.apply(self.game_state)
         self.next_state = self.game_state
         self.game_state.next_state = self.game_state
+        settings.powerups += 1
 
     def resize(self, old, new):
         super(PickPowerUpState, self).resize(old, new)
