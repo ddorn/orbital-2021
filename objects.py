@@ -1,5 +1,5 @@
 from math import sqrt
-from random import gauss, randrange, uniform
+from random import choice, gauss, randrange, uniform
 from typing import List, Union
 
 import pygame
@@ -224,7 +224,7 @@ class Ball(Object):
                 if self.rect_collision(br) is not None:
                     dx = (r.centerx - br.centerx) / br.width * 2  # proportion on the side
                     dx = clamp(dx, -0.8, 0.8)
-                    dx = round(self.ANGLES * dx) / self.ANGLES  # discrete steps like in the original game
+                    # dx = round(self.ANGLES * dx) / self.ANGLES  # discrete steps like in the original game
 
                     angle = (-dx + 1) * 90
                     self.vel.from_polar((1, -angle))
@@ -434,22 +434,27 @@ class Bricks(Object):
                 kind = palette.index(color)
                 brick = lvl.make_brick(kind, l, c)
                 lvl.bricks[l][c] = brick
-            # print()
+
+        # Power up some bricks
+        for brick, nb in Config().bricks_levels.items():
+            for _ in range(nb):
+                (l, c), _ = choice(list(lvl.all_bricks(True)))
+                lvl.bricks[l][c] = lvl.make_brick(brick, l, c)
         return lvl
 
     def make_brick(self, kind, l, c):
-        if kind < 1:
-            return None
-        cls = {
-            5: Brick,
-            10: DoubleBrick,
-            12: BombBrick,
-        }[kind]
 
-        if kind not in Config().bricks:
-            cls = Brick
+        if isinstance(kind, int):
+            if kind < 1:
+                return None
 
-        return cls(self.to_screen(l, c), self.brick_size)
+            kind = {
+                5: Brick,
+                10: DoubleBrick,
+                12: BombBrick,
+            }[kind]
+
+        return kind(self.to_screen(l, c), self.brick_size)
 
     @classmethod
     def random(cls):
@@ -519,6 +524,8 @@ class BombBrick(Brick):
     SINGLE_HIT = True
 
     def hit(self, game, sound=True, damage=1):
+        if not self.alive:
+            return
         get_sound('bomb').play()
         super(BombBrick, self).hit(game, False)
 

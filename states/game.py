@@ -1,11 +1,11 @@
-from random import random, shuffle
+from random import random
 
 import pygame
 
-from core import App, DEBUG, State
+from core import DEBUG, State
 from locals import Color, Config, get_level_surf
-from objects import BackgroundShape, Bar, Bricks, Ball, Particle
-from powerups import auto_ball_spawn, brick, enemy_fire, god_like, POWERUPS, random_powerup, very_bad, wind
+from objects import BackgroundShape, Ball, Bar, Bricks, Particle
+from powerups import brick, god_like, very_bad
 from states.gameover import GameOverState
 from states.pickpowerup import PickPowerUpState
 
@@ -17,7 +17,7 @@ class GameState(State):
     BG_COLOR = Color.DARKEST
     BG_MUSIC = 'ambience.wav'
     BG_SHAPES = 10
-    BALL_SPEED_GAIN = 0.5
+    BALL_SPEED_GAIN = 0.2
 
     def __init__(self):
         super().__init__()
@@ -87,7 +87,7 @@ class GameState(State):
         if len(self.bricks) < 3:
             self.end_level()
 
-        if self.lives <= 2:
+        if self.lives <= 0:
             self.next_state = GameOverState(self.level, self.score, self.powerups)
 
     def draw(self, display):
@@ -111,12 +111,10 @@ class GameState(State):
             2: very_bad,
             3: god_like,
         }.get(self.level)
-        pows = random_powerup(3, kind) if kind else random_powerup(3)
 
-        self.next_state = PickPowerUpState(self, pows)
+        self.next_state = PickPowerUpState(self, kind) if kind else PickPowerUpState(self)
         self.bricks.alive = False
 
     def get_powerup(self):
         self.score_level += 1
-        pows = random_powerup(3)
-        self.next_state = PickPowerUpState(self, pows)
+        self.next_state = PickPowerUpState(self)

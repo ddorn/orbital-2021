@@ -1,20 +1,23 @@
-from typing import List
-
 import pygame
 import pygame.gfxdraw
 
 from core import State
-from locals import clamp, Color, Config, ease
-from powerups import Powerup
+from locals import Color, Config, ease, weighted_choice
+from powerups import bad, brick, god_like, good, random_powerup, very_bad
 
 
 class PickPowerUpState(State):
     bg_color = None
 
-    def __init__(self, game_state, powerups: List[Powerup]):
+    def __init__(self, game_state, *kinds):
         super(PickPowerUpState, self).__init__()
         self.game_state = game_state
-        self.powerups = powerups
+        if not kinds:
+            kinds = weighted_choice([
+                ((very_bad, bad), 1),
+                ((good, god_like, brick), 1),
+            ])
+        self.powerups = random_powerup(3, *kinds, game=game_state)
         self._selected = 0
         self.selected_at = 0
         self.last_selected = None

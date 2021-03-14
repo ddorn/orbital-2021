@@ -36,7 +36,7 @@ class IntroState(State):
                 ))
 
         if self.ended:
-            self.next_state = PickPowerUpState(GameState(), random_powerup(3))
+            self.next_state = PickPowerUpState(GameState())
 
     def handle_event(self, event):
         super(IntroState, self).handle_event(event)

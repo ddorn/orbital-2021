@@ -1,10 +1,11 @@
+from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
 from random import gauss, random, uniform
 
 import pygame
 
-DEBUG = 1
+DEBUG = -1
 VOLUME = {
     'BG_MUSIC': 0.8,
     'bong': 1,
@@ -112,7 +113,7 @@ class Config:
         self.ball_speed = 7
         self.brick_life = 1
 
-        self.bricks = {10, 12} if DEBUG else set()
+        self.bricks_levels = defaultdict(int)
 
         self.wind = False
         self.wind_speed = 0

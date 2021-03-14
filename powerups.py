@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-from random import choice, shuffle, uniform
 from typing import Callable, TYPE_CHECKING
 
-from objects import Bar
+from objects import Bar, BombBrick, DoubleBrick
 
 if TYPE_CHECKING:
     from states.game import GameState
@@ -15,16 +14,25 @@ POWERUPS = []
 class Powerup:
     SIZE = 50
 
-    def __init__(self, name, descr, kind, img_idx, effect):
+    def __init__(self, name, descr, kind, img_idx, effect, limit=None):
         self.name = name
         self.descr = descr
         self.kind = kind
         self.img_idx = img_idx
+        self.limit = limit
         self.effect = effect  # type: Callable[[GameState], None]
 
+    def available(self, game_state):
+        if self.limit is None:
+            return True
+        if callable(self.limit):
+            return self.limit(game_state)
+        return game_state.powerups.count(self) < self.limit
+
     def apply(self, game_state):
-        self.effect(game_state)
-        game_state.powerups.append(self)
+        if self.available(game_state):
+            self.effect(game_state)
+            game_state.powerups.append(self)
 
     @property
     def color(self):
@@ -42,9 +50,9 @@ class Powerup:
         return r
 
 
-def make_powerup(name, descr, kind, img_idx):
+def make_powerup(name, descr, kind, img_idx, **kwargs):
     def wrapper(effect):
-        p = Powerup(name, descr, kind, img_idx, effect)
+        p = Powerup(name, descr, kind, img_idx, effect, **kwargs)
         POWERUPS.append(p)
         return p
 
@@ -56,6 +64,7 @@ class Kind:
     color: str
     proba: int
 
+
 very_bad = Kind('red', 1)
 god_like = Kind(Color.GOLD, 1)
 bad = Kind(Color.ORANGE, 6)
@@ -66,15 +75,21 @@ KINDS = [
     bad, very_bad, good, god_like, brick
 ]
 
+
 def random_kind():
     return weighted_choice([(k, k.proba) for k in KINDS])
 
-def random_powerup(maxi=3, *kinds):
+
+def random_powerup(maxi=3, *kinds, game):
     if not kinds:
         kinds = KINDS
-    pows = [(p, p.kind.proba) for p in POWERUPS if p.kind in kinds]
-    print(kinds, pows)
-    return weighted_choice(pows, maxi)
+    pows = [(p, p.kind.proba) for p in POWERUPS if p.kind in kinds and p.available(game)]
+    choice =  weighted_choice(pows, maxi)
+    if not choice:
+        return [life_up]
+    if not isinstance(choice, list):
+        return [choice]
+    return choice
 
 
 @make_powerup("Life up", "Soon even cats will be jalous !", good, 0, )
@@ -82,13 +97,15 @@ def life_up(game: "GameState"):
     game.lives += 1
 
 
-@make_powerup('Bigger bar', 'Size does matter sometimes...', good, 2, )
+@make_powerup('Bigger bar', 'Size does matter sometimes...', good, 2,
+              limit=lambda g: all(bar.size.x < Config().w / 4 for bar in g.get_all(Bar)))
 def bigger_bar(game):
     for bar in game.get_all(Bar):
         bar.size.x += Bar.START_SIZE[0] / 2 * Config().zoom
 
 
-@make_powerup('Smaller bar', 'A small bar teaches you to be more precise...', bad, 6, )
+@make_powerup('Smaller bar', 'A small bar teaches you to be more precise...', bad, 6,
+              limit=lambda g: any(bar.size.x < Config().w / 12 for bar in g.get_all(Bar)))
 def smaller_bar(game):
     for bar in game.get_all(Bar):
         bar.size.x *= 0.8
@@ -111,7 +128,7 @@ def stronger_bricks(game):
     Config().brick_life += 1
 
 
-@make_powerup('Wind', 'Wooooosh', very_bad, 5)
+@make_powerup('Wind', 'Wooooosh', very_bad, 5, limit=1)
 def wind(game):
     Config().wind = True
 
@@ -121,24 +138,26 @@ def enemy_fire(game):
     Config().brick_fire_probability += 1
 
 
-@make_powerup('Ball spawn', 'Get a new ball every sometimes', god_like, 8)
+@make_powerup('Ball spawn', 'Get a new ball every sometimes', god_like, 8, limit=3)
 def auto_ball_spawn(game):
     Config().ball_spawn_level += 1
 
-@make_powerup('Mouse control', 'A good cat plays with the mouse', god_like, 9)
+
+@make_powerup('Mouse control', 'A good cat plays with the mouse', god_like, 9, limit=1)
 def mouse_control(game):
     Config().mouse_control = True
 
+
 @make_powerup('Clone brick', 'Spawn a new ball when broken', brick, 12)
 def clone_brick(game):
-    Config().bricks.add(10)
+    Config().bricks_levels[DoubleBrick] += 1
+
 
 @make_powerup('Explosive bricks', 'BOOOOOM', brick, 13)
 def explosive_bricks(game):
-    Config().bricks.add(12)
+    Config().bricks_levels[BombBrick] += 2
+
 
 @make_powerup('Mirror', "You have two left hands but swapping controls won't help", very_bad, 10)
 def flip_controls(game):
     Config().flip_controls = not Config().flip_controls
-
-

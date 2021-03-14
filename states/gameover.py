@@ -4,7 +4,7 @@ import pygame
 
 from core import State
 from locals import Color, Config
-from powerups import Powerup, random_powerup
+from powerups import Powerup
 
 
 class GameOverState(State):
@@ -21,7 +21,7 @@ class GameOverState(State):
         if event.key == pygame.K_SPACE:
             from states.game import GameState
             from states.pickpowerup import PickPowerUpState
-            self.next_state = PickPowerUpState(GameState(), random_powerup(3))
+            self.next_state = PickPowerUpState(GameState())
 
     def logic(self):
         super(GameOverState, self).logic()
@@ -31,15 +31,15 @@ class GameOverState(State):
         super().draw(display)
 
         if self.timer % 100 > 0:
+            for i, p in enumerate(self.powerups):
+                pos = self.pos_of(i)
+                p.draw(display, pos)
+
             r = self.draw_text(display, "GAME OVER", Color.ORANGE, 64, center=self.size / 2)
             self.draw_text(display, "Press SPACE to restart", Color.BRIGHT, midtop=r.midbottom)
 
             self.draw_text(display, f"Score: {self.score}", topright=(self.w - 5, 3))
             self.draw_text(display, f"Level: {self.level}", topleft=(5, 3))
-
-            for i, p in enumerate(self.powerups):
-                pos = self.pos_of(i)
-                p.draw(display, pos)
 
     def pos_of(self, idx):
         x = idx % self.LINE_SIZE
