@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+from random import choice, shuffle, uniform
 from typing import Callable, TYPE_CHECKING
 
 from objects import Bar
@@ -13,12 +15,16 @@ POWERUPS = []
 class Powerup:
     SIZE = 50
 
-    def __init__(self, name, descr, color, img_idx, effect):
+    def __init__(self, name, descr, kind, img_idx, effect):
         self.name = name
         self.descr = descr
-        self.color = color
+        self.kind = kind
         self.img = sprite(img_idx, 5)
         self.apply = effect  # type: Callable[[GameState], None]
+
+    @property
+    def color(self):
+        return self.kind.color
 
     def draw(self, display, center):
         r = self.img.get_rect(center=center)
@@ -26,25 +32,52 @@ class Powerup:
 
         # r = pygame.Rect(0, 0, self.SIZE, self.SIZE)
         # r.center = center
-        # pygame.draw.rect(display, self.color, r, 2, 4)
+        # pygame.draw.rect(display, self.kind, r, 2, 4)
 
         return r
 
 
-def make_powerup(name, descr, color, img_idx):
+def make_powerup(name, descr, kind, img_idx):
     def wrapper(effect):
-        p = Powerup(name, descr, color, img_idx, effect)
+        p = Powerup(name, descr, kind, img_idx, effect)
         POWERUPS.append(p)
         return p
 
     return wrapper
 
 
-bad = Color.ORANGE
-very_bad = 'red'
-good = Color.GREEN
-god_like = Color.GOLD
-brick = Color.MIDDLE
+@dataclass
+class Kind:
+    color: str
+    proba: int
+
+very_bad = Kind('red', 1)
+god_like = Kind(Color.GOLD, 1)
+bad = Kind(Color.ORANGE, 5)
+good = Kind(Color.GREEN, 4)
+brick = Kind(Color.MIDDLE, 1)
+
+KINDS = [
+    bad, very_bad, good, god_like, brick
+]
+
+def random_kind():
+    cum = []
+    p = 0
+    for k in KINDS:
+        cum.append((k, p))
+        p += k.proba
+    cut = uniform(0, cum[-1][1])
+    for (k, p) in cum:
+        if p < cut:
+            return k
+
+def random_powerup(maxi=3, kind=None):
+    if kind is None:
+        kind = random_kind()
+    pows = [p for p in POWERUPS if p.kind is kind]
+    shuffle(pows)
+    return pows[:maxi]
 
 
 @make_powerup("Life up", "Soon even cats will be jalous !", good, 0, )

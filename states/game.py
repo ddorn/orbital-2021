@@ -5,7 +5,7 @@ import pygame
 from core import App, DEBUG, State
 from locals import Color, Config, get_level_surf
 from objects import Bar, Bricks, Ball, Particle
-from powerups import auto_ball_spawn, enemy_fire, POWERUPS, wind
+from powerups import auto_ball_spawn, brick, enemy_fire, god_like, POWERUPS, random_powerup, very_bad, wind
 from states.gameover import GameOverState
 from states.pickpowerup import PickPowerUpState
 
@@ -107,7 +107,11 @@ class GameState(State):
     def end_level(self):
         self.level += 1
         Config().ball_speed += self.BALL_SPEED_GAIN
-        shuffle(POWERUPS)
-        pows = POWERUPS[:3]
+        kind = {
+            1: brick,
+            2: very_bad,
+            3: god_like,
+        }.get(self.level)
+        pows = random_powerup(kind=kind)
         self.next_state = PickPowerUpState(self, pows)
         self.bricks.alive = False
