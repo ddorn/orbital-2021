@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
@@ -5,7 +6,7 @@ from random import gauss, random, uniform
 
 import pygame
 
-DEBUG = -1
+DEBUG = 0
 VOLUME = {
     'BG_MUSIC': 0.8,
     'bong': 1,
@@ -13,7 +14,7 @@ VOLUME = {
 }
 
 
-def clamp(x, mini, maxi):
+def clamp(x, mini=0, maxi=1):
     if x < mini:
         return mini
     if x > maxi:
@@ -80,9 +81,13 @@ def sprite(idx, scale=2):
 
 
 @lru_cache()
+def _get_sound(name):
+    return pygame.mixer.Sound(Files.SOUNDS / (name + '.wav'))
+
+
 def get_sound(name):
-    sound = pygame.mixer.Sound(Files.SOUNDS / (name + '.wav'))
-    sound.set_volume(VOLUME.get(name, 1))
+    sound = _get_sound(name)
+    sound.set_volume(VOLUME.get(name, 1) * Settings().sfx)
     return sound
 
 
@@ -219,6 +224,41 @@ class Config:
         return False
 
 
+class Settings:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is not None:
+            return cls._instance
+        self = super(Settings, cls).__new__(cls)
+        cls._instance = self
+
+        self.reset()
+        self.load()
+        return self
+
+    def reset(self):
+        self.music = 1
+        self.sfx = 1
+
+        # Stats
+        self.games = 0
+        self.highscore = 0
+        self.total_score = 0
+        self.explosions = 0
+        self.balls_lost = 0
+        self.time_played = 0
+
+    def load(self):
+        if Files.SETTINGS.exists():
+            self.__dict__.update(json.loads(Files.SETTINGS.read_text()))
+
+    def save(self):
+        s = json.dumps(self.__dict__)
+        Files.SETTINGS.write_text(s)
+        print(self.__dict__)
+
+
 class Color:
     GOLD = "#FFD700"
     GREEN = "#7ED16F"
@@ -237,3 +277,4 @@ class Files:
     SPRITE_SHEET = ASSETS / 'sprite_sheet.png'
     LEVELS = ASSETS / "levels.png"
     SOUNDS = ASSETS / 'sounds'
+    SETTINGS = TOP / 'settings.json'

@@ -5,7 +5,7 @@ from time import time
 
 import pygame
 
-from locals import Color, Config, DEBUG, draw_text, Files, vec2int, VOLUME
+from locals import Color, Config, DEBUG, draw_text, Files, Settings, vec2int, VOLUME
 
 
 class Object:
@@ -157,7 +157,7 @@ class State:
         self.next_state = self
         if self.BG_MUSIC:
             pygame.mixer.music.load(Files.SOUNDS / self.BG_MUSIC)
-            pygame.mixer.music.set_volume(VOLUME['BG_MUSIC'])
+            pygame.mixer.music.set_volume(VOLUME['BG_MUSIC'] * Settings().music)
             pygame.mixer.music.play(-1)
 
     def on_exit(self):
@@ -233,6 +233,8 @@ class App:
 
         duration = time() - start
         print(f"Game played for {duration:.2f} seconds, at {frame / duration:.1f} FPS.")
+        Settings().time_played += duration
+        Settings().save()
 
     def events(self):
         for event in pygame.event.get():

@@ -93,9 +93,13 @@ def random_powerup(maxi=3, *kinds, game):
     return choice
 
 
-@make_powerup("Life up", "Soon even cats will be jalous !", good, 0, )
+@make_powerup("Life up", "I don't want to die !", good, 0)
 def life_up(game: "GameState"):
     game.lives += 1
+
+@make_powerup("<3 <3", "Soon even cats will be jalous !", god_like, 0)
+def big_life_up(game: "GameState"):
+    game.lives += 2
 
 
 @make_powerup('Bigger bar', 'Size does matter sometimes...', good, 2,
@@ -104,6 +108,12 @@ def bigger_bar(game):
     for bar in game.get_all(Bar):
         bar.size.x += Bar.START_SIZE[0] / 2 * Config().zoom
 
+@make_powerup('Huge bar', 'Size does matter sometimes...', god_like, 2,
+              limit=lambda g: all(bar.size.x < Config().w / 4 for bar in g.get_all(Bar)))
+def huger_bar(game):
+    for bar in game.get_all(Bar):
+        # 2 bigger bar
+        bar.size.x += Bar.START_SIZE[0] * 1 * Config().zoom
 
 @make_powerup('Smaller bar', 'A small bar teaches you to be more precise...', bad, 6,
               limit=lambda g: any(bar.size.x < Config().w / 12 for bar in g.get_all(Bar)))

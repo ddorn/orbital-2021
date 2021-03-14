@@ -80,7 +80,7 @@ class PickPowerUpState(State):
         pygame.gfxdraw.box(display, display.get_rect(), (0, 0, 0, 120), )
 
         y = self.h * 0.6
-        displacement = ease((self.timer - self.selected_at) / 15) * 50 * Config().zoom
+        displacement = ease((self.timer - self.selected_at) / 15) * 50
         for i, powerup in enumerate(self.powerups):
             if i == self.selected:
                 dy = displacement
@@ -91,7 +91,7 @@ class PickPowerUpState(State):
                 dy = 0
 
             x = self.pos_x(i)
-            r = powerup.draw(display, (x, y - dy))
+            r = powerup.draw(display, (x, y - dy * Config().zoom))
 
             color = powerup.color
             r = self.draw_text(display, powerup.name, color, midtop=r.midbottom)

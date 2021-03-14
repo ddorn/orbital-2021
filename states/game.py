@@ -7,6 +7,7 @@ from locals import clamp, Color, Config, get_level_surf
 from objects import BackgroundShape, Ball, Bar, Bricks, Particle
 from powerups import bad, brick, god_like, good, very_bad
 from states.gameover import GameOverState
+from states.pause import PauseState
 from states.pickpowerup import PickPowerUpState
 
 pygame.init()
@@ -42,16 +43,17 @@ class GameState(State):
     def level_size(self):
         return self.w, self.h - 100
 
-    def handle_event(self, event):
-        super(GameState, self).handle_event(event)
+    def on_key_down(self, event):
+        key = event.key
+        if DEBUG:
+            if key == pygame.K_SPACE:
+                self.add(self.bar.spawn_ball())
+                return
+            elif key == pygame.K_n:
+                self.end_level()
 
-        if event.type == pygame.KEYDOWN:
-            key = event.key
-            if DEBUG:
-                if key == pygame.K_SPACE:
-                    self.add(self.bar.spawn_ball())
-                elif key == pygame.K_n:
-                    self.end_level()
+        if key in (pygame.K_p, pygame.K_SPACE):
+            self.next_state = PauseState(self)
 
     def logic(self):
         if not self.bricks.alive:
