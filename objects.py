@@ -5,7 +5,7 @@ from typing import List, Union
 import pygame
 
 from core import App, Object
-from locals import Color, clamp, Config, polar
+from locals import Color, clamp, Config, get_sound, polar
 
 
 class Particle(Object):
@@ -143,16 +143,19 @@ class Ball(Object):
             self.alive = False
 
         # Collision with bars
-        for bar in state.get_all(Bar):
-            r = self.rect
-            br: pygame.Rect = bar.rect
-            if self.rect_collision(br) is not None:
-                dx = (r.centerx - br.centerx) / br.width * 2  # proportion on the side
-                dx = clamp(dx, -0.8, 0.8)
-                dx = round(8 * dx) / 8  # discrete steps like in the original game
+        if self.vel.y > 0:
+            for bar in state.get_all(Bar):
+                r = self.rect
+                br: pygame.Rect = bar.rect
+                if self.rect_collision(br) is not None:
+                    dx = (r.centerx - br.centerx) / br.width * 2  # proportion on the side
+                    dx = clamp(dx, -0.8, 0.8)
+                    dx = round(8 * dx) / 8  # discrete steps like in the original game
 
-                angle = (-dx + 1) * 90
-                self.vel.from_polar((self.VELOCITY, -angle))
+                    angle = (-dx + 1) * 90
+                    self.vel.from_polar((self.VELOCITY, -angle))
+
+                    get_sound('bong').play()
 
         # Collision against bricks
         for bricks in state.get_all(Bricks):
@@ -348,6 +351,7 @@ class Brick(Object):
         pygame.draw.rect(display, Color.DARKEST, self.rect, 2)
 
     def hit(self, game):
+        get_sound('hit').play()
         self.life -= 1
         if self.life <= 0:
             self.alive = False

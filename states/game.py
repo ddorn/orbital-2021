@@ -18,6 +18,7 @@ class Data:
 
 class GameState(State):
     BG_COLOR = Color.DARKEST
+    BG_MUSIC = 'ambience.wav'
     _INSTANCE = None
 
     def __init__(self, size):
@@ -53,6 +54,11 @@ class GameState(State):
                 self.add(self.bar.spawn_ball())
 
     def logic(self):
+        if not self.bricks.alive:
+            # We would like it to be after the line alive=False,
+            # but then modifications of powerups would not apply directly
+            self.bricks = self.add(Bricks(17, 17, (self.w, self.h - 40)))
+
         super().logic()
         config = Config()
         config.logic()
@@ -71,11 +77,11 @@ class GameState(State):
             self.add(self.bar.spawn_ball())
 
         if len(self.bricks) < 3:
+            self.level += 1
             shuffle(POWERUPS)
             pows = POWERUPS[:3]
             self.next_state = PickPowerUpState(self, pows)
             self.bricks.alive = False
-            self.bricks = self.add(Bricks(17, 17, (self.w, self.h - 40)))
 
         if self.lives <= 0:
             self.next_state = GameOverState(self.size, self.level, self.score)

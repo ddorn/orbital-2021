@@ -7,7 +7,7 @@ from objects import Bar
 if TYPE_CHECKING:
     from states.game import GameState
 
-from locals import Color, Config, Paths, sprite, sprite_sheet
+from locals import Color, Config, Files, sprite, sprite_sheet
 
 POWERUPS = []
 
@@ -48,58 +48,36 @@ good = Color.GREEN
 god_like = Color.GOLD
 
 
-@make_powerup(
-    "Life up",
-    "Soon even cats will be jalous !",
-    good, 0,
-)
+@make_powerup("Life up", "Soon even cats will be jalous !", good, 0, )
 def life_up(game: "GameState"):
-    game.lives += 2
+    game.lives += 1
 
 
-@make_powerup(
-    'Bigger bar',
-    'Size does matter sometimes...',
-    good, 2,
-)
+@make_powerup('Bigger bar', 'Size does matter sometimes...', good, 2, )
 def bigger_bar(game):
     for bar in game.get_all(Bar):
         bar.size.x += Bar.START_SIZE[0] / 2
-@make_powerup(
-    'Smaller bar',
-    'A small bar teaches you to be more precise...',
-    bad, 6,
-)
+
+
+@make_powerup('Smaller bar', 'A small bar teaches you to be more precise...', bad, 6, )
 def smaller_bar(game):
     for bar in game.get_all(Bar):
         bar.size.x *= 0.8
 
 
-@make_powerup(
-    'Speed up',
-    "Turn into a wasp on steroids, one km/h at a time.",
-    good, 1,
-)
+@make_powerup('Speed up', "Turn into a wasp on steroids, one km/h at a time.", good, 1, )
 def speed_up(game):
     for bar in game.get_all(Bar):
         bar.velocity += 1
 
 
-@make_powerup(
-    'Speed down',
-    "Good luck caching up with the balls !",
-    bad, 4,
-)
+@make_powerup('Speed down', "Good luck caching up with the balls !", bad, 4, )
 def speed_up(game):
     for bar in game.get_all(Bar):
         bar.velocity += 1
 
 
-@make_powerup(
-    'Stronger bricks',
-    'All brick go to workout and need one more hit to pop.',
-    bad, 3,
-)
+@make_powerup('Stronger bricks', 'All brick go to workout and need one more hit to pop.', bad, 3, )
 def stronger_bricks(game):
     Config().brick_life += 1
 
@@ -108,9 +86,11 @@ def stronger_bricks(game):
 def wind(game):
     Config().wind = True
 
+
 @make_powerup('American bricks', 'Gun control is inefficient... take cover !', very_bad, 7)
 def enemy_fire(game):
     Config().brick_fire_probability += 1
+
 
 @make_powerup('Ball spawn', 'Get a new ball every sometimes', god_like, 8)
 def auto_ball_spawn(game):

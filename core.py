@@ -4,7 +4,7 @@ from time import time
 
 import pygame
 
-from locals import Color, Config, Paths
+from locals import Color, Config, Files
 
 DEBUG = 0
 
@@ -44,6 +44,7 @@ class Object:
 
 class State:
     BG_COLOR = Color.DARKEST
+    BG_MUSIC = None
 
     def __init__(self, size):
         self.add_later = []
@@ -134,11 +135,21 @@ class State:
     @staticmethod
     @lru_cache()
     def get_font(size):
-        return pygame.font.Font(Paths.FONT, size)
+        return pygame.font.Font(Files.FONT, size)
 
     def do_shake(self, frames):
         assert frames >= 0
         self.shake += frames
+
+    def on_resume(self):
+        self.next_state = self
+        if self.BG_MUSIC:
+            pygame.mixer.music.load(Files.SOUNDS / self.BG_MUSIC)
+            pygame.mixer.music.set_volume(0.3)
+            pygame.mixer.music.play(-1)
+
+    def on_exit(self):
+        pass
 
 class App:
     SIZE = (800, 500)
@@ -160,6 +171,7 @@ class App:
         frame = 0
         start = time()
         self.running = True
+        self.state.on_resume()
         while self.running:
             self.events()
             self.state.logic()
@@ -168,7 +180,10 @@ class App:
             pygame.display.update()
             self.clock.tick(self.FPS)
             frame += 1
-            self.state = self.state.next_state
+            if self.state != self.state.next_state:
+                self.state.on_exit()
+                self.state = self.state.next_state
+                self.state.on_resume()
 
         duration = time() - start
         print(f"Game played for {duration:.2f} seconds, at {frame / duration:.1f} FPS.")

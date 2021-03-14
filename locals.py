@@ -5,6 +5,12 @@ from random import gauss, random
 import pygame
 
 
+VOLUME = {
+    'bong': 0.5,
+    'hit': 0.2,
+}
+
+
 def clamp(x, mini, maxi):
     if x < mini:
         return mini
@@ -28,7 +34,7 @@ def polar(r, phi):
 
 @lru_cache
 def sprite_sheet():
-    return pygame.image.load(Paths.SPRITE_SHEET)
+    return pygame.image.load(Files.SPRITE_SHEET)
 
 @lru_cache()
 def sprite(idx, scale=2):
@@ -39,6 +45,14 @@ def sprite(idx, scale=2):
     if scale > 1:
         img = pygame.transform.scale(img, (S * scale, S * scale))
     return img
+
+
+@lru_cache()
+def get_sound(name):
+    sound = pygame.mixer.Sound(Files.SOUNDS / (name + '.wav'))
+    sound.set_volume(VOLUME.get(name, 1))
+    return sound
+
 
 class Config:
     _instance = None
@@ -83,7 +97,6 @@ class Config:
 
         # Wind
         if self.wind:
-            print(self._wind_phase)
             if self.wind_speed != self._wind_speed_goal:
                 self.wind_speed = ease(self.timer, self._wind_start, self._wind_end) * self._wind_speed_goal
             elif self._wind_end <= self.timer:
@@ -100,10 +113,12 @@ class Config:
                     direction = (random() > 0.5) * 2 - 1
                     self._wind_speed_goal = gauss(3, 0.2) * direction   # px/frame
                     self._wind_end = self.timer + gauss(60 * 3, 30)  # 3s ± 0.5s
+                    get_sound('wind').play()
                 else: # const -> down
                     self._wind_phase = 'down'
                     self._wind_speed_goal = 0
                     self._wind_end = self.timer + gauss(60 * 3, 30)  # 3s ± 0.5s
+                    get_sound('wind').fadeout(int((self.timer - self._wind_end) / 60 * 1000))
 
     def fire(self):
         if not self.brick_fire_probability:
@@ -136,9 +151,10 @@ class Color:
     BRIGHTEST = '#ffe3fe'
 
 
-class Paths:
+class Files:
     TOP = Path(__file__).parent
     ASSETS = TOP / "assets"
     FONT = ASSETS / "fonts" / "ThaleahFat.ttf"
     SPRITE_SHEET = ASSETS / 'sprite_sheet.png'
+    SOUNDS = ASSETS / 'sounds'
 
