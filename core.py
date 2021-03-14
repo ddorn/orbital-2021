@@ -3,7 +3,7 @@ from time import time
 
 import pygame
 
-from locals import Color, Paths
+from locals import Color, Config, Paths
 
 DEBUG = 0
 
@@ -132,6 +132,8 @@ class App:
     CURRENT_APP = None
 
     def __init__(self, initial_state):
+        Config().size = self.SIZE
+
         self.running = False
         self.display = pygame.display.set_mode(self.SIZE)
         self.clock = pygame.time.Clock()

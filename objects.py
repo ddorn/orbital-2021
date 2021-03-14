@@ -1,5 +1,5 @@
 from math import sqrt
-from random import gauss, uniform
+from random import gauss, randrange, uniform
 from typing import List, Union
 
 import pygame
@@ -9,12 +9,16 @@ from locals import Color, clamp, Config, polar
 
 
 class Particle(Object):
-    def __init__(self, pos, vel, lifespan, decay=0.95):
-        super().__init__(pos, (1, 1))
+    DIAMOND = 0
+    LINE = 1
+
+    def __init__(self, pos, vel, lifespan, decay=0.95, size=2, shape=DIAMOND):
+        super().__init__(pos, (size, size))
         self.vel = pygame.Vector2(vel)
         self.lifespan = lifespan
         self.age = 0
         self.decay = decay
+        self.shape = shape
 
     def logic(self, state):
         self.age += 1
@@ -25,18 +29,38 @@ class Particle(Object):
 
     def draw(self, display):
         super(Particle, self).draw(display)
-        r = 5 * (1 - self.age / self.lifespan) ** 0.5
-        dir = self.vel.normalize()
-        cross = pygame.Vector2(-dir.y, dir.x)
-        vertices = [
-            self.pos + dir * r,
-            self.pos + cross * r,
-            self.pos - dir * r * 2,
-            self.pos - cross * r,
-        ]
-        pygame.draw.polygon(display, Color.BRIGHTEST, vertices)
 
-        # pygame.draw.circle(display, Color.BRIGHTEST, self.pos, radius)
+        r = 5 * self.decay ** self.age
+        if self.shape == self.DIAMOND:
+            dir = self.vel.normalize()
+            cross = pygame.Vector2(-dir.y, dir.x)
+            vertices = [
+                self.pos + dir * r,
+                self.pos + cross * r,
+                self.pos - dir * r * 2,
+                self.pos - cross * r,
+            ]
+            pygame.draw.polygon(display, Color.BRIGHTEST, vertices)
+        elif self.shape == self.LINE:
+            pygame.draw.line(display, Color.BRIGHTEST, self.pos, self.pos + self.vel * 3, 3)
+        else:
+            pygame.draw.circle(display, Color.BRIGHTEST, self.pos, self.size.y)
+
+    @classmethod
+    def wind_particle(cls):
+        conf = Config()
+        speed = conf.wind_speed
+        if speed > 0:
+            speed = max(1, speed)
+            x = 0
+        else:
+            speed = min(-1, speed)
+            x = conf.w
+        y = uniform(0, conf.h)
+
+        return Particle(
+            (x, y), (speed * 5, 0), 9999, 1, randrange(1, 5), Particle.LINE
+        )
 
 
 class Bar(Object):
@@ -66,6 +90,8 @@ class Bar(Object):
         if any(keys[k] for k in self.K_RIGHT):
             self.pos.x += self.velocity
 
+        self.pos.x += Config().wind_speed
+
         self.pos.x = clamp(
             self.pos.x,
             0,
@@ -91,6 +117,7 @@ class Ball(Object):
 
     def logic(self, state):
         self.pos += self.vel
+        self.pos.x += Config().wind_speed
 
         if self.pos.x < 0:
             self.pos.x = 0
@@ -208,12 +235,12 @@ class Bricks(Object):
             for _ in range(lines)
         ]  # type: List[List[Union[None, Brick]]]
 
-        # for c in range(lines // 3, 2 * lines // 3 + 1):
-        #     for l in range(4, 6):
-        #         l = randrange(0, lines)
-        #         c = randrange(0, cols)
-        # if c != cols // 2:
-        #     self.bricks[l][c] = Brick(self.grid_to_screen(l, c), self.brick_size)
+        for c in range(lines // 3, 2 * lines // 3 + 1):
+            for l in range(4, 6):
+                # l = randrange(0, lines)
+                # c = randrange(0, cols)
+                if c != cols // 2:
+                    self.bricks[l][c] = Brick(self.grid_to_screen(l, c), self.brick_size)
 
     def __len__(self):
         return sum(1 for _ in self.all_bricks())
@@ -276,7 +303,7 @@ class Brick(Object):
 
     def hit(self, game):
         self.life -= 1
-        if self.alive <= 0:
+        if self.life <= 0:
             self.alive = False
 
             from states.game import GameState
@@ -285,7 +312,7 @@ class Brick(Object):
 
             particles = self.PARTICLES
         else:
-            particles = self.PARTICLES / 2
+            particles = self.PARTICLES // 2
 
         for _ in range(particles):
             game.add(Particle(

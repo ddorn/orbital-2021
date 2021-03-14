@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from random import gauss, random
 
 import pygame
 
@@ -11,8 +12,9 @@ def clamp(x, mini, maxi):
         return maxi
     return x
 
-def ease(x):
-    x = clamp(x, 0, 1)
+def ease(x, mini=0.0, maxi=1.0):
+    x = clamp(x, mini, maxi)
+    x = (x - mini) / (maxi - mini)
     return x ** 2 * (3 - 2*x)
 
 
@@ -47,11 +49,59 @@ class Config:
         self = super(Config, cls).__new__(cls)
         cls._instance = self
 
+        self.size = (0, 0)  # Set by App, we don't want it to be reset on new levels
         self.reset()
         return self
 
     def reset(self):
+        self.timer = 0
+
         self.brick_life = 1
+
+        self.wind = False
+        self.wind_speed = 0
+        self._wind_speed_goal = 0
+        self._wind_end = 0
+        self._wind_start = 0
+        self._wind_phase = 'const'
+
+    @property
+    def w(self):
+        return self.size[0]
+    @property
+    def h(self):
+        return self.size[1]
+
+    def logic(self):
+        self.timer += 1
+
+        # Wind
+        if self.wind:
+            print(self._wind_phase)
+            if self.wind_speed != self._wind_speed_goal:
+                self.wind_speed = ease(self.timer, self._wind_start, self._wind_end) * self._wind_speed_goal
+            elif self._wind_end <= self.timer:
+                if self._wind_phase == 'up':
+                    self._wind_end = self.timer + gauss(60 * 6, 60)  # 6s ± 1s
+                    self._wind_phase = 'const'
+                elif self._wind_phase == 'down':
+                    self._wind_end = self.timer + gauss(60 * 20, 60 * 3)  # 20s ± 3s
+                    self._wind_speed_goal = 0
+                    self.wind_speed = 0
+                    self._wind_phase = 'const'
+                elif self._wind_speed_goal == 0:  # const -> up
+                    self._wind_phase = 'up'
+                    direction = (random() > 0.5) * 2 - 1
+                    self._wind_speed_goal = gauss(3, 0.2) * direction   # px/frame
+                    self._wind_end = self.timer + gauss(60 * 3, 30)  # 3s ± 0.5s
+                else: # const -> down
+                    self._wind_phase = 'down'
+                    self._wind_speed_goal = 0
+                    self._wind_end = self.timer + gauss(60 * 3, 30)  # 3s ± 0.5s
+
+
+
+
 
 
 class Color:

@@ -65,7 +65,7 @@ def bigger_bar(game):
     for bar in game.get_all(Bar):
         bar.size.x += Bar.START_SIZE[0] / 2
 @make_powerup(
-    'Smalled bar',
+    'Smaller bar',
     'A small bar teaches you to be more precise...',
     bad, 6,
 )
@@ -101,3 +101,8 @@ def speed_up(game):
 )
 def stronger_bricks(game):
     Config().brick_life += 1
+
+
+@make_powerup('Wind', 'Wooooosh', very_bad, 5)
+def wind(game):
+    Config().wind = True
