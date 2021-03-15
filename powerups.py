@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, TYPE_CHECKING
 
-from objects import Bar, BombBrick, DoubleBrick
+from objects import Bar, BombBrick, Bricks, DoubleBrick
 
 if TYPE_CHECKING:
     from states.game import GameState
@@ -137,6 +137,9 @@ def speed_down(game):
 @make_powerup('Stronger bricks', 'All brick go to workout and need one more hit to pop.', very_bad, 3, )
 def stronger_bricks(game):
     Config().brick_life += 1
+    for bricks in game.get_all(Bricks):
+        for b in bricks.all_bricks():
+            b.life += 1
 
 
 @make_powerup('Wind', 'Wooooosh', very_bad, 5, limit=1)
@@ -144,7 +147,7 @@ def wind(game):
     Config().wind = True
 
 
-@make_powerup('American bricks', 'Gun control is inefficient... take cover !', very_bad, 7)
+@make_powerup('American bricks', 'Gun control is inefficient... take cover !', very_bad, 7, limit=4)
 def enemy_fire(game):
     Config().brick_fire_probability += 1
 
@@ -159,12 +162,12 @@ def mouse_control(game):
     Config().mouse_control = True
 
 
-@make_powerup('Clone brick', 'Spawn a new ball when broken', brick, 12)
+@make_powerup('Clone brick', 'Spawn a new ball when broken', brick, 12, limit=4)
 def clone_brick(game):
     Config().bricks_levels[DoubleBrick] += 1
 
 
-@make_powerup('Explosive bricks', 'BOOOOOM', brick, 13)
+@make_powerup('Explosive bricks', 'BOOOOOM', brick, 13, limit=4)
 def explosive_bricks(game):
     Config().bricks_levels[BombBrick] += 2
 

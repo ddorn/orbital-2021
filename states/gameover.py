@@ -3,7 +3,7 @@ from typing import List
 import pygame
 
 from core import State
-from locals import Color, Config, settings
+from locals import Color, Config, overlay, settings
 from powerups import Powerup
 
 
@@ -35,6 +35,7 @@ class GameOverState(State):
         for i, p in enumerate(self.powerups):
             pos = self.pos_of(i)
             p.draw(display, pos)
+        overlay(display, self.BG_COLOR, 100)
 
         self.draw_text(display, f"Score: {self.score}", topright=(self.w - 5, 3))
         self.draw_text(display, f"Level: {self.level}", topleft=(5, 3))

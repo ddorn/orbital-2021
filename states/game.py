@@ -94,8 +94,6 @@ class GameState(State):
         self.draw_text(display, f"Level: {self.level}", topleft=(5, 3))
         self.draw_text(display, "<3" * self.lives, Color.ORANGE, midtop=(self.w / 2, 3))
 
-        display.blit(get_level_surf(0), (0, 0))
-
     def loose_life(self):
         self.lives -= 1
         self.do_shake(12)
@@ -125,16 +123,19 @@ class GameState(State):
               500 * self.score_level * int(1 + self.score_level / 10)
               )
 
-    def increase_score(self):
-        bonus = sum(p.kind.value for p in self.powerups)
-        if bonus > 0:
-            bonus = -bonus // 2
-        else:
-            bonus = -bonus
+    def increase_score(self, hit=False):
+        if hit:
+            ds = 1
+        else:  # Brick break
+            bonus = sum(p.kind.value for p in self.powerups)
+            if bonus > 0:
+                bonus = -bonus // 2
+            else:
+                bonus = -bonus
+            ds = max(10 + bonus, 2)
+            if ds > 10:
+                ds += ds - 10
 
-        ds = max(10 + bonus, 2)
-        if ds > 10:
-            ds += ds - 10
         self.score += ds
         settings.total_score += ds
         return ds

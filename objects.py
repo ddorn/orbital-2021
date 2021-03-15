@@ -87,7 +87,7 @@ class Particle(Object):
 
 
 class TextParticle(Particle):
-    def __init__(self, txt, pos, vel, lifespan=30, decay=1, size=16, color=Color.GOLD):
+    def __init__(self, txt, pos, vel, lifespan=30, decay=1, size=32, color=Color.GOLD):
         super().__init__(pos, vel, lifespan, decay, color=color)
         self.txt = txt
         self.surf = get_text(txt, color, config.iscale(size))
@@ -223,7 +223,10 @@ class Ball(Object):
         self.vel = polar(1, angle)
 
     def logic(self, state):
-        self.pos += self.vel * Config().ball_speed * Config().zoom
+        vel = self.vel * Config().ball_speed * Config().zoom
+        if abs(vel.y) < 1:
+            vel.y = 1 if vel.y > 0 else -1
+        self.pos += vel
         self.pos.x += Config().wind_speed
 
         if self.pos.x < 0:
@@ -500,7 +503,21 @@ class Brick(Object):
 
     def draw(self, display):
         display.fill(self.color, self.rect)
-        pygame.draw.rect(display, Color.DARKEST, self.rect, 2)
+        border = 2 + 2 * self.life
+        tl, tr, br, bl = [
+            self.rect.topleft,
+            self.rect.topright,
+            self.rect.bottomright,
+            self.rect.bottomleft
+        ]
+        for i in range(border):
+            d1 = pygame.Vector2(i, i)
+            d2 = pygame.Vector2(-i, i)
+            pygame.draw.line(display, Color.DARK, br - d1, bl - d2)
+            pygame.draw.line(display, Color.DARK, br - d1, tr + d2)
+            pygame.draw.line(display, Color.BRIGHTEST, tl + d1, tr + d2)
+            pygame.draw.line(display, Color.BRIGHTEST, tl + d1, bl - d2)
+
         if self.SPRITE is not None:
             img = sprite(self.SPRITE, round(self.size.y / 16))
             r = img.get_rect(center=self.rect.center)
@@ -515,13 +532,13 @@ class Brick(Object):
             settings.bricks_destroyed += 1
             self.alive = False
 
-            from states.game import GameState
-            if isinstance(game, GameState):
-                score = game.increase_score()
-                game.add(TextParticle(f"+{score}", self.rect.center, (0, -1)))
+            score = game.increase_score()
+            game.add(TextParticle(f"+{score}", self.rect.center, (0, -1)))
 
             particles = self.PARTICLES
         else:
+            score = game.increase_score(hit=True)
+            game.add(TextParticle(f"+{score}", self.rect.center, (0, -1), 20, size=24))
             particles = self.PARTICLES // 2
 
         for _ in range(particles):

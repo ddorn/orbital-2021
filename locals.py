@@ -5,6 +5,7 @@ from pathlib import Path
 from random import gauss, random, uniform
 
 import pygame
+import pygame.gfxdraw
 
 DEBUG = 0
 VOLUME = {
@@ -108,16 +109,21 @@ def get_text(txt, color, size):
     if color is None:
         color = Color.BRIGHTEST
     # noinspection PyTypeChecker
-    return get_font(size * round(Config().zoom)).render(str(txt), 1, color)
+    return get_font(size).render(str(txt), 1, color)
 
 
 def draw_text(surf, txt, color=None, size=32, **anchor):
     assert len(anchor) == 1
-    tmp_surf = get_text(txt, color, size)
+    tmp_surf = get_text(txt, color, size * round(Config().zoom))
     rect = tmp_surf.get_rect(**anchor)
     surf.blit(tmp_surf, rect)
     return rect
 
+
+def overlay(surf, color, alpha):
+    color = pygame.Color(color)
+    color.a = alpha
+    pygame.gfxdraw.box(surf, surf.get_rect(), color)
 
 class Config:
     _instance = None
@@ -209,7 +215,7 @@ class Config:
         if not self.brick_fire_probability:
             return False
 
-        if self.timer - self._last_fire < 60 * 3 * 1 / self.brick_fire_probability:
+        if self.timer - self._last_fire < 60 * (5 - self.brick_fire_probability):
             return False
         t = random() < 0.001
         if t:
