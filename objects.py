@@ -211,7 +211,6 @@ class Bar(Object):
 
 class Ball(Object):
     RADIUS = 10
-    ANGLES = 16
 
     def __init__(self, center, angle=None):
         size = scale(self.RADIUS, self.RADIUS) * 2
@@ -249,7 +248,6 @@ class Ball(Object):
                 if self.rect_collision(br) is not None:
                     dx = (r.centerx - br.centerx) / br.width * 2  # proportion on the side
                     dx = clamp(dx, -0.8, 0.8)
-                    # dx = round(self.ANGLES * dx) / self.ANGLES  # discrete steps like in the original game
 
                     angle = (-dx + 1) * 90
                     self.vel.from_polar((1, -angle))
@@ -264,9 +262,10 @@ class Ball(Object):
                     vel_along_normal = n.dot(self.vel)
                     if vel_along_normal < 0:
                         continue  # Already separating
-                    # invert velocity along the normal
-                    self.vel -= 2 * vel_along_normal * n
                     brick.hit(state)
+                    # invert velocity along the normal
+                    if brick.SOLID:
+                        self.vel -= 2 * vel_along_normal * n
 
     def draw(self, display):
         super(Ball, self).draw(display)
@@ -476,6 +475,7 @@ class Bricks(Object):
                 return None
 
             kind = {
+                3: GlassBrick,
                 5: Brick,
                 10: DoubleBrick,
                 12: BombBrick,
@@ -485,24 +485,26 @@ class Bricks(Object):
 
     @classmethod
     def random(cls):
-        idx = randrange(0, 12)
+        idx = randrange(0, 13)
         return cls.load(idx)
 
 class Brick(Object):
     PARTICLES = 6
     SPRITE = None
     SINGLE_HIT = False
+    COLOR = Color.BRIGHT
+    SOLID = True
 
     def __init__(self, pos, size):
         super().__init__(pos, size)
-        self.color = Color.BRIGHT
         self.life = Config().brick_life if not self.SINGLE_HIT else 1
 
     def __repr__(self):
         return f"<Brick({self.pos.x}, {self.pos.y})>"
 
     def draw(self, display):
-        display.fill(self.color, self.rect)
+        if self.COLOR:
+            display.fill(self.COLOR, self.rect)
         border = 2 + 2 * self.life
         tl, tr, br, bl = [
             self.rect.topleft,
@@ -588,6 +590,14 @@ class DoubleBrick(Brick):
     def hit(self, game, sound=True, damage=1):
         super(DoubleBrick, self).hit(game, sound, damage)
         game.add(Ball(self.rect.center))
+
+
+class GlassBrick(Brick):
+    COLOR = None
+    SPRITE = 18
+    SINGLE_HIT = True
+    SOLID = False
+
 
 
 class Schedule(Object):

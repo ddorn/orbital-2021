@@ -7,7 +7,7 @@ from random import gauss, random, uniform
 import pygame
 import pygame.gfxdraw
 
-DEBUG = 0
+DEBUG = -1
 VOLUME = {
     'BG_MUSIC': 0.8,
     'bong': 1,
@@ -263,6 +263,9 @@ class Settings:
             self.__dict__.update(json.loads(Files.SETTINGS.read_text()))
 
     def save(self):
+        if DEBUG:
+            print('Not saving settings because debug mode is on.')
+            return
         s = json.dumps(self.__dict__)
         Files.SETTINGS.write_text(s)
         print(self.__dict__)

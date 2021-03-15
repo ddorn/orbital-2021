@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Callable, TYPE_CHECKING
 
-from objects import Bar, BombBrick, Bricks, DoubleBrick
+from objects import Bar, BombBrick, Bricks, DoubleBrick, GlassBrick
 
 if TYPE_CHECKING:
     from states.game import GameState
@@ -139,7 +139,8 @@ def stronger_bricks(game):
     Config().brick_life += 1
     for bricks in game.get_all(Bricks):
         for b in bricks.all_bricks():
-            b.life += 1
+            if not b.SINGLE_HIT:
+                b.life += 1
 
 
 @make_powerup('Wind', 'Wooooosh', very_bad, 5, limit=1)
@@ -171,6 +172,9 @@ def clone_brick(game):
 def explosive_bricks(game):
     Config().bricks_levels[BombBrick] += 2
 
+@make_powerup('Invisible wall', 'This is called a window.', brick, 11, limit=4)
+def invisible_wall(game):
+    Config().bricks_levels[GlassBrick] += 1
 
 @make_powerup('Mirror', "You have two left hands but swapping controls won't help", very_bad, 10)
 def flip_controls(game):
