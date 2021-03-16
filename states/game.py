@@ -66,6 +66,7 @@ class GameState(State):
         super().logic()
         config = Config()
         config.logic()
+        config.ball_speed += 1 / 60 / 60  # one pixel per second
 
         # No more balls, spawn one, loose life
         if not list(self.get_all(Ball)):
@@ -83,7 +84,7 @@ class GameState(State):
         if config.spawn_ball():
             self.add(self.bar.spawn_ball())
 
-        if len(self.bricks) < 3:
+        if len(self.bricks) < 5:
             self.end_level()
 
         if self.lives <= 0:

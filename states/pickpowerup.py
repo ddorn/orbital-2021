@@ -63,6 +63,8 @@ class PickPowerUpState(State):
             self.selected -= 1
         elif event.key == pygame.K_RIGHT:
             self.selected += 1
+        elif event.key == pygame.K_s:
+            self.skip()
 
     def logic(self):
         super().logic()
@@ -104,6 +106,10 @@ class PickPowerUpState(State):
         self.next_state = self.game_state
         self.game_state.next_state = self.game_state
         settings.powerups += 1
+
+    def skip(self):
+        if any(p.kind.value > 0 for p in self.powerups):
+            self.next_state = self.game_state
 
     def resize(self, old, new):
         super(PickPowerUpState, self).resize(old, new)
