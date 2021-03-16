@@ -1,8 +1,20 @@
+# Violet
+
+The prototype of this game was made in one weekend for the sub-Orbital game jam,
+it was not submited in due time, as I was busy playing it... 
 
 
+### Controls
+
+You use the arrow keys to move around, and the space bar to do
+anything else. Also pressing `P` toggles the pause/settings screen
+and `R` restarts the game.
 
 
 ### Assets
+
+Thanks to all the people who made assests I've used in this game ! 
+All the graphics are mine, but I made none of the music and sound effects.
 
 Music: [Power Bots Loop](https://www.dl-sounds.com/royalty-free/power-bots-loop/)
 
@@ -14,25 +26,33 @@ Effects:
 ### Building executables
 
 This section is mostly for me, for future reference, but may be of use
-to you if you are looking for examples of how to build pygame apps executables.
+to you if you are looking for examples of how to build pygame apps executables
+with pyinstaller.
 
-Currently, all build commands are in [build.sh](./build.sh), and should create
-the three builds inside the `build/` folder, provided that the script 
-is run in the right environment. Thus the steps here are for the setup of the environment.
+Currently, all build commands are in the [Makefile](./Makefile) and should create
+three builds inside the `dist/` folder: 
 
-Once the environment is setup, `./build.sh` should be the only thing that is needed
-to build or rebuild hte binaries.
+ - the source zip
+ - a windows executable
+ - a linux executable
+ 
+...Provided that the script is run in the right environment.
+Thus the steps here are for the setup of the environment.
+
+Once the environment is setup, `make` should be the only thing that is needed
+to build or rebuild the binaries. Optionally `make zip`, `make linux` or `make windows`
+will produce only the corresponding build.
 
 #### For linux
 
-You need python 3.8 installed. The rest is take care of by poetry, 
+You need python 3.8 installed. The rest is taken care of by poetry, 
 but you could also install the dependencies yourself, setup a virtual environment 
 (or not) and run the pyinstaller command.
 
-Thus, the only missing dependencies is
+Thus, the only missing dependency is
 [poetry](https://python-poetry.org), that you can get
 from the instructions on their website.
-otherwise, install them with pip
+otherwise, install them with pip:
 
 ```shell script
 python3.8 -m pip install .
