@@ -1,5 +1,6 @@
 __pycache__
 .envrc
 dist/
+build/
 raw-*
 settings.json
