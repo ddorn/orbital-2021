@@ -248,6 +248,9 @@ class App:
                 self.set_display(event.size)
                 new = Config().size
                 self.state.resize(old, new)
+            elif event.type == pygame.MOUSEMOTION:
+                # send the event relative to the viewport
+                event.pos = pygame.Vector2(event.pos) - self.view_port.topleft
 
             self.state.handle_event(event)
 

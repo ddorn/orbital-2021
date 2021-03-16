@@ -7,7 +7,7 @@ from random import gauss, random, uniform
 import pygame
 import pygame.gfxdraw
 
-DEBUG = -1
+DEBUG = 0
 VOLUME = {
     'BG_MUSIC': 0.8,
     'bong': 1,

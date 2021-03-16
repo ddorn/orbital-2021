@@ -54,6 +54,8 @@ class GameState(State):
 
         if key in (pygame.K_p, pygame.K_SPACE):
             self.next_state = PauseState(self)
+        if key == pygame.K_r:
+            self.next_state = GameOverState(self.level, self.score, self.powerups)
 
     def logic(self):
         if not self.bricks.alive:
