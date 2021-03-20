@@ -1,8 +1,8 @@
 from core import App
-from states.intro import IntroState
+from states.menu import MenuState
 
 if __name__ == '__main__':
     import pygame
     print(pygame.init())
 
-    App(IntroState).run()
+    App(MenuState).run()

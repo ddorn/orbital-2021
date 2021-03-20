@@ -28,7 +28,7 @@ class Particle(Object):
     LINE = 1
     Z = 1
 
-    def __init__(self, pos, vel, lifespan, decay=0.95, size=2, color=Color.BRIGHTEST, shape=DIAMOND):
+    def __init__(self, pos, vel, lifespan, decay=0.95, size=2, color=Color.BRIGHTEST, shape=DIAMOND, decay_velocity=True):
         super().__init__(pos, scale(size, size))
         self.vel = pygame.Vector2(vel) * Config().zoom
         self.lifespan = lifespan
@@ -36,6 +36,7 @@ class Particle(Object):
         self.decay = decay
         self.shape = shape
         self.color = color
+        self.decay_velocity = decay_velocity
 
     def resize(self, old, new):
         super().resize(old, new)
@@ -46,12 +47,13 @@ class Particle(Object):
         if self.age > self.lifespan:
             self.alive = False
         self.pos += self.vel
-        self.vel *= self.decay
+        if self.decay_velocity:
+            self.vel *= self.decay
 
     def draw(self, display):
         super(Particle, self).draw(display)
 
-        r = 5 * self.decay ** self.age
+        r = 5 * self.decay ** self.age * config.zoom
         if self.shape == self.DIAMOND:
             draw_diamond(display, self.pos, self.vel, r, self.color)
         elif self.shape == self.LINE:

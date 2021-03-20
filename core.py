@@ -229,7 +229,10 @@ class App:
             if self.state != self.state.next_state:
                 self.state.on_exit()
                 self.state = self.state.next_state
-                self.state.on_resume()
+                if self.state is None:
+                    self.running = False
+                else:
+                    self.state.on_resume()
 
         duration = time() - start
         print(f"Game played for {duration:.2f} seconds, at {frame / duration:.1f} FPS.")

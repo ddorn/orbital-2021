@@ -280,6 +280,7 @@ class Color:
     MIDDLE = '#93329e'
     BRIGHT = '#b4aee8'
     BRIGHTEST = '#ffe3fe'
+    VIVID = '#BF55EC'
 
 
 class Files:
