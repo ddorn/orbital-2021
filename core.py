@@ -236,7 +236,7 @@ class App:
 
         duration = time() - start
         print(f"Game played for {duration:.2f} seconds, at {frame / duration:.1f} FPS.")
-        Settings().time_played += duration
+        Settings().minutes_played += duration / 60
         Settings().save()
 
     def events(self):

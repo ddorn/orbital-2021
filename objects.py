@@ -1,5 +1,5 @@
 from math import sqrt
-from random import choice, gauss, randrange, uniform
+from random import choice, gauss, random, randrange, uniform
 from typing import List, Union
 
 import pygame
@@ -30,7 +30,7 @@ class Particle(Object):
 
     def __init__(self, pos, vel, lifespan, decay=0.95, size=2, color=Color.BRIGHTEST, shape=DIAMOND, decay_velocity=True):
         super().__init__(pos, scale(size, size))
-        self.vel = pygame.Vector2(vel) * Config().zoom
+        self.vel = pygame.Vector2(vel) * Config().zoom  # We adjust velocity for screen size *here*
         self.lifespan = lifespan
         self.age = 0
         self.decay = decay
@@ -85,6 +85,30 @@ class Particle(Object):
             pos, polar(gauss(15, 3), uniform(0, 360)),
             20,
             color=Color.ORANGE,
+        )
+
+    @classmethod
+    def from_edges(cls, goal, lifespan=120, decay=0.98):
+        w, h = config.size
+        x = uniform(0, w)
+        y = uniform(0, h)
+
+        if random() < 0.5:
+            x = 0 if random() < 0.5 else w
+        else:
+            y = 0 if random() < 0.5 else h
+
+        path = pygame.Vector2(goal) - (x, y)
+        # HACK: We divide by zoom, to conpensate the zoom inside Particle's contructor
+        # So the velocity is just what is required to reach goal
+        vel = path / lifespan / Config().zoom
+
+        return Particle(
+            (x, y) - vel * 3,
+            vel,
+            lifespan + 0,
+            decay=decay,
+            decay_velocity=False
         )
 
 

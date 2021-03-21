@@ -21,9 +21,8 @@ class GameOverState(State):
 
     def on_key_down(self, event):
         if event.key == pygame.K_SPACE:
-            from states.game import GameState
-            from states.pickpowerup import PickPowerUpState
-            self.next_state = PickPowerUpState(GameState())
+            from states.menu import MenuState
+            self.next_state = MenuState()
 
     def logic(self):
         super(GameOverState, self).logic()

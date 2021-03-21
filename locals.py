@@ -65,6 +65,17 @@ def vec2int(vec):
     return int(round(vec[0])), int(round(vec[1]))
 
 
+def rrange(x: float):
+    """Random range. The decimal part is interpreted as a probability of having one more iteration."""
+
+    base = int(x)
+    probability = x - base
+
+    if random() < probability:
+        return range(base + 1)
+    return range(base)
+
+
 @lru_cache()
 def get_img(path):
     return pygame.image.load(path)
@@ -109,12 +120,12 @@ def get_text(txt, color, size):
     if color is None:
         color = Color.BRIGHTEST
     # noinspection PyTypeChecker
-    return get_font(size).render(str(txt), 1, color)
+    return get_font(size).render(str(txt), 0, color)
 
 
 def draw_text(surf, txt, color=None, size=32, **anchor):
     assert len(anchor) == 1
-    tmp_surf = get_text(txt, color, size * round(Config().zoom))
+    tmp_surf = get_text(txt, color, round(size * Config().zoom))
     rect = tmp_surf.get_rect(**anchor)
     surf.blit(tmp_surf, rect)
     return rect
@@ -255,7 +266,7 @@ class Settings:
         self.bricks_destroyed = 0
         self.balls_lost = 0
         self.bullet_hit = 0
-        self.time_played = 0
+        self.minutes_played = 0
         self.powerups = 0
 
     def load(self):

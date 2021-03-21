@@ -1,12 +1,14 @@
+from math import ceil, pi, sin
 from random import random, uniform
 
 import pygame
 import pygame.gfxdraw
 
 from core import State
-from locals import Color, Config
+from locals import Color, Config, config, get_text, rrange
 from objects import BackgroundShape, Particle
 from states.game import GameState
+from states.statistics import StatisticsState
 
 
 class MenuState(State):
@@ -17,8 +19,8 @@ class MenuState(State):
         self.buttons = {
             "Play": GameState,
             "Settings": MenuState,
-            "Highscore": MenuState,
-            "Statistics": MenuState,
+            "Highscores": MenuState,
+            "Statistics": StatisticsState,
             "Quit": None
         }
         self.selected = 0
@@ -53,30 +55,24 @@ class MenuState(State):
         if self.timer == 1:
             return
 
-        for _ in range(3):
-            x = uniform(0, self.w)
-            y = uniform(0, self.h)
-
-            if random() < 0.5:
-                x = 0 if random() < 0.5 else self.w
-            else:
-                y = 0 if random() < 0.5 else self.h
-
-            center = pygame.Vector2(self.play_button_center)
-            path = center - (x, y)
-            lifespan = 80
-            vel = path / lifespan / Config().zoom
-
-
-            self.add(Particle((x, y) - vel * 3, vel, lifespan, 0.97, decay_velocity=False))
+        for _ in rrange(min(3, self.timer / 100)):
+            self.add(Particle.from_edges(self.play_button_center))
 
     def draw(self, display):
         super().draw(display)
 
         pygame.gfxdraw.box(display, (self.w / 4, self.h / 3 * 0, self.w  / 2, self.h ), (0, 0, 0, 80))
 
-        r = self.draw_text(display, "Violet", Color.GOLD, 80, midtop=(self.w / 2, self.h * 0.1))
-        r.y += self.h * 0.15
+        center = self.w / 2, self.h * 0.2
+        t = self.timer / 40
+        # r = self.draw_text(display, "Violet", Color.GOLD, 80, midtop=midtop)
+        s = get_text("Violet", Color.GOLD, config.iscale(90 * (1 + 0.10 * (sin(2.5*t)))))
+        s = pygame.transform.rotate(s, 5*sin(t*pi))
+        r = s.get_rect(center=center)
+        display.blit(s, r)
+
+        # r.y += self.h * 0.15
+        r.bottom = self.h * 0.4
 
         for i, text in enumerate(self.buttons):
             if i == self.selected:
